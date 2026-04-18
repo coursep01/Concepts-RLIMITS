@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 
 interface RLimitDiagramProps {
   resource: string;
@@ -9,13 +9,13 @@ interface RLimitDiagramProps {
 }
 
 /**
- * RLimitDiagram Component
+ * RLimitDiagram Component - Responsive Version
  * 
- * Visualizes the Unix RLIMIT system architecture:
+ * Visualizes the Unix RLIMIT system architecture with responsive wrapping:
  * User/Shell → Process → Kernel → System Resources
  * 
- * Uses SVG for scalable graphics and animated flow visualization.
- * Cyan (#06b6d4) for active flows, Amber (#f59e0b) for warnings.
+ * Uses React components instead of fixed SVG to allow dynamic wrapping
+ * based on available window space. No horizontal scrolling required.
  */
 
 export default function RLimitDiagram({
@@ -25,221 +25,240 @@ export default function RLimitDiagram({
   currentUsage,
   isWarning,
 }: RLimitDiagramProps) {
-  const canvasRef = useRef<SVGSVGElement>(null);
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 800);
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const usagePercent = (currentUsage / softLimit) * 100;
-  const accentColor = isWarning ? '#f59e0b' : '#06b6d4';
-  const accentColorLight = isWarning ? '#fbbf24' : '#22d3ee';
+  const accentColor = isWarning ? 'text-amber-400' : 'text-cyan-400';
+  const accentBg = isWarning ? 'from-amber-500 to-red-500' : 'from-cyan-400 to-cyan-600';
+  const accentGlow = isWarning ? 'glow-amber' : 'glow-cyan';
+
+  // Determine layout based on window width
+  const isCompact = windowWidth < 768;
+  const isMedium = windowWidth < 1024;
+
+  const ArchitectureLayer = ({ title, subtitle, description, icon }: any) => (
+    <div className="flex flex-col items-center">
+      <div className="bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-3 min-w-[140px] text-center hover:bg-slate-700 transition-colors">
+        <div className="text-xs font-mono text-slate-400 mb-1">{icon}</div>
+        <div className="font-semibold text-sm text-slate-100">{title}</div>
+        <div className="text-xs text-slate-400 mt-1">{subtitle}</div>
+        <div className="text-xs text-slate-500 mt-1">{description}</div>
+      </div>
+    </div>
+  );
+
+  const FlowArrow = ({ direction = 'right' }: any) => {
+    const arrowClass = direction === 'right' 
+      ? 'after:content-["→"]' 
+      : 'after:content-["↓"]';
+    
+    return (
+      <div className={`flex items-center justify-center ${arrowClass} text-cyan-400 text-xl font-bold px-2 py-1 animate-pulse`} />
+    );
+  };
 
   return (
-    <div className="w-full bg-slate-900/50 rounded-lg border border-slate-700 p-4 overflow-x-auto">
-      <svg
-        ref={canvasRef}
-        viewBox="0 0 800 500"
-        className="w-full min-w-[600px] h-auto"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        {/* Background grid */}
-        <defs>
-          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#475569" strokeWidth="0.5" opacity="0.3" />
-          </pattern>
+    <div className="w-full bg-slate-900/50 rounded-lg border border-slate-700 p-4 space-y-6">
+      {/* Title */}
+      <div className="mb-4">
+        <h3 className="text-sm font-mono text-slate-400 mb-2">USER SPACE</h3>
+        <div className="h-px bg-gradient-to-r from-slate-600 to-transparent" />
+      </div>
+
+      {/* Architecture Flow - Responsive Grid */}
+      <div className={`grid gap-3 ${isCompact ? 'grid-cols-1' : isMedium ? 'grid-cols-2' : 'grid-cols-4'}`}>
+        <ArchitectureLayer
+          icon="🐚"
+          title="Shell"
+          subtitle="ulimit -n"
+          description="Set limits"
+        />
+        
+        {!isCompact && <FlowArrow direction={isMedium ? 'down' : 'right'} />}
+        
+        <ArchitectureLayer
+          icon="⚙️"
+          title="Process"
+          subtitle={resource}
+          description="Inherits limits"
+        />
+        
+        {!isCompact && <FlowArrow direction={isMedium ? 'down' : 'right'} />}
+        
+        <ArchitectureLayer
+          icon="🔧"
+          title="Kernel"
+          subtitle="getrlimit()"
+          description="Enforces limits"
+        />
+        
+        {!isCompact && <FlowArrow direction={isMedium ? 'down' : 'right'} />}
+        
+        <ArchitectureLayer
+          icon="💾"
+          title="Resources"
+          subtitle="Files, CPU,"
+          description="Memory, etc."
+        />
+      </div>
+
+      {/* Kernel Space Separator */}
+      <div className="mt-6 mb-4">
+        <h3 className="text-sm font-mono text-slate-400 mb-2">KERNEL SPACE</h3>
+        <div className="h-px bg-gradient-to-r from-slate-600 to-transparent" />
+      </div>
+
+      {/* Limit Visualization - Responsive Grid */}
+      <div className={`grid gap-4 ${isCompact ? 'grid-cols-1' : isMedium ? 'grid-cols-2' : 'grid-cols-3'}`}>
+        {/* Soft Limit */}
+        <div className="flex flex-col items-center p-4 bg-slate-800/50 rounded-lg border border-slate-700">
+          <div className="text-xs font-mono text-cyan-400 mb-3 font-semibold">SOFT LIMIT</div>
           
-          {/* Gradient for limit rings */}
-          <linearGradient id="softGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.8" />
-            <stop offset="100%" stopColor="#0891b2" stopOpacity="0.6" />
-          </linearGradient>
+          {/* Circular gauge */}
+          <div className="relative w-24 h-24 mb-3">
+            <svg className="w-full h-full" viewBox="0 0 100 100">
+              {/* Background circle */}
+              <circle cx="50" cy="50" r="45" fill="none" stroke="#475569" strokeWidth="6" opacity="0.3" />
+              {/* Value circle */}
+              <circle
+                cx="50"
+                cy="50"
+                r="45"
+                fill="none"
+                stroke="#06b6d4"
+                strokeWidth="6"
+                opacity="0.7"
+                strokeDasharray="283 283"
+                strokeLinecap="round"
+                transform="rotate(-90 50 50)"
+              />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-center">
+                <div className="text-lg font-mono font-bold text-cyan-300">{softLimit}</div>
+              </div>
+            </div>
+          </div>
+          
+          <p className="text-xs text-slate-400 text-center">
+            Active enforcement boundary
+          </p>
+        </div>
 
-          <linearGradient id="hardGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.6" />
-            <stop offset="100%" stopColor="#d97706" stopOpacity="0.4" />
-          </linearGradient>
+        {/* Hard Limit */}
+        <div className="flex flex-col items-center p-4 bg-slate-800/50 rounded-lg border border-slate-700">
+          <div className="text-xs font-mono text-amber-400 mb-3 font-semibold">HARD LIMIT</div>
+          
+          {/* Circular gauge */}
+          <div className="relative w-24 h-24 mb-3">
+            <svg className="w-full h-full" viewBox="0 0 100 100">
+              {/* Background circle */}
+              <circle cx="50" cy="50" r="45" fill="none" stroke="#475569" strokeWidth="6" opacity="0.3" />
+              {/* Value circle */}
+              <circle
+                cx="50"
+                cy="50"
+                r="45"
+                fill="none"
+                stroke="#f59e0b"
+                strokeWidth="6"
+                opacity="0.7"
+                strokeDasharray="283 283"
+                strokeLinecap="round"
+                transform="rotate(-90 50 50)"
+              />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-center">
+                <div className="text-lg font-mono font-bold text-amber-300">{hardLimit}</div>
+              </div>
+            </div>
+          </div>
+          
+          <p className="text-xs text-slate-400 text-center">
+            Maximum ceiling (root only)
+          </p>
+        </div>
 
-          <linearGradient id="usageGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor={accentColor} stopOpacity="1" />
-            <stop offset="100%" stopColor={accentColorLight} stopOpacity="0.8" />
-          </linearGradient>
+        {/* Current Usage */}
+        <div className="flex flex-col items-center p-4 bg-slate-800/50 rounded-lg border border-slate-700">
+          <div className={`text-xs font-mono mb-3 font-semibold ${accentColor}`}>CURRENT USAGE</div>
+          
+          {/* Circular gauge with usage arc */}
+          <div className="relative w-24 h-24 mb-3">
+            <svg className="w-full h-full" viewBox="0 0 100 100">
+              {/* Background circle */}
+              <circle cx="50" cy="50" r="45" fill="none" stroke="#475569" strokeWidth="6" opacity="0.3" />
+              {/* Usage arc */}
+              <circle
+                cx="50"
+                cy="50"
+                r="45"
+                fill="none"
+                stroke={isWarning ? '#f59e0b' : '#06b6d4'}
+                strokeWidth="6"
+                opacity="0.9"
+                strokeDasharray={`${(usagePercent / 100) * 283} 283`}
+                strokeLinecap="round"
+                transform="rotate(-90 50 50)"
+              />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-center">
+                <div className={`text-2xl font-mono font-bold ${accentColor}`}>
+                  {usagePercent.toFixed(0)}%
+                </div>
+                <div className="text-xs text-slate-400 font-mono">
+                  {currentUsage}/{softLimit}
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <p className="text-xs text-slate-400 text-center">
+            {isWarning ? 'Approaching limit' : 'Within limits'}
+          </p>
+        </div>
+      </div>
 
-          {/* Animated flow filter */}
-          <filter id="glow">
-            <feGaussianBlur stdDeviation="2" result="coloredBlur" />
-            <feMerge>
-              <feMergeNode in="coloredBlur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
+      {/* Status Bar */}
+      <div className="mt-4 p-3 rounded-lg bg-slate-800/50 border border-slate-700 flex items-center gap-3">
+        <div className={`w-3 h-3 rounded-full ${isWarning ? 'bg-amber-400 animate-pulse' : 'bg-cyan-400'}`} />
+        <div className="flex-1">
+          <div className={`text-sm font-semibold ${isWarning ? 'text-amber-300' : 'text-cyan-300'}`}>
+            {isWarning ? '⚠️ WARNING: Approaching Limit' : '✓ Normal Operation'}
+          </div>
+          <div className="text-xs text-slate-400">
+            {isWarning 
+              ? 'Resource usage is above 80% of soft limit' 
+              : 'Resource usage is within safe limits'}
+          </div>
+        </div>
+      </div>
 
-        {/* Background */}
-        <rect width="800" height="500" fill="#1e293b" />
-        <rect width="800" height="500" fill="url(#grid)" />
-
-        {/* Layer Labels */}
-        <text x="20" y="30" fontSize="12" fontFamily="IBM Plex Mono" fill="#94a3b8" fontWeight="600">
-          USER SPACE
-        </text>
-        <line x1="20" y1="35" x2="780" y2="35" stroke="#475569" strokeWidth="1" strokeDasharray="5,5" />
-
-        <text x="20" y="150" fontSize="12" fontFamily="IBM Plex Mono" fill="#94a3b8" fontWeight="600">
-          KERNEL SPACE
-        </text>
-        <line x1="20" y1="155" x2="780" y2="155" stroke="#475569" strokeWidth="1" strokeDasharray="5,5" />
-
-        {/* USER/SHELL LAYER */}
-        <g>
-          <rect x="50" y="50" width="120" height="80" rx="6" fill="#334155" stroke="#475569" strokeWidth="2" />
-          <text x="110" y="75" fontSize="14" fontFamily="Roboto" fontWeight="600" fill="#e2e8f0" textAnchor="middle">
-            Shell
-          </text>
-          <text x="110" y="95" fontSize="11" fontFamily="IBM Plex Mono" fill="#cbd5e1" textAnchor="middle">
-            ulimit -n
-          </text>
-          <text x="110" y="110" fontSize="10" fontFamily="Roboto" fill="#94a3b8" textAnchor="middle">
-            Set limits
-          </text>
-        </g>
-
-        {/* PROCESS LAYER */}
-        <g>
-          <rect x="250" y="50" width="140" height="80" rx="6" fill="#334155" stroke="#475569" strokeWidth="2" />
-          <text x="320" y="75" fontSize="14" fontFamily="Roboto" fontWeight="600" fill="#e2e8f0" textAnchor="middle">
-            Process
-          </text>
-          <text x="320" y="95" fontSize="11" fontFamily="IBM Plex Mono" fill="#cbd5e1" textAnchor="middle">
-            {resource}
-          </text>
-          <text x="320" y="110" fontSize="10" fontFamily="Roboto" fill="#94a3b8" textAnchor="middle">
-            Inherits limits
-          </text>
-        </g>
-
-        {/* KERNEL LAYER */}
-        <g>
-          <rect x="450" y="50" width="140" height="80" rx="6" fill="#334155" stroke="#475569" strokeWidth="2" />
-          <text x="520" y="75" fontSize="14" fontFamily="Roboto" fontWeight="600" fill="#e2e8f0" textAnchor="middle">
-            Kernel
-          </text>
-          <text x="520" y="95" fontSize="11" fontFamily="IBM Plex Mono" fill="#cbd5e1" textAnchor="middle">
-            getrlimit()
-          </text>
-          <text x="520" y="110" fontSize="10" fontFamily="Roboto" fill="#94a3b8" textAnchor="middle">
-            Enforces limits
-          </text>
-        </g>
-
-        {/* SYSTEM RESOURCES */}
-        <g>
-          <rect x="650" y="50" width="120" height="80" rx="6" fill="#334155" stroke="#475569" strokeWidth="2" />
-          <text x="710" y="75" fontSize="14" fontFamily="Roboto" fontWeight="600" fill="#e2e8f0" textAnchor="middle">
-            Resources
-          </text>
-          <text x="710" y="95" fontSize="11" fontFamily="IBM Plex Mono" fill="#cbd5e1" textAnchor="middle">
-            Files, CPU,
-          </text>
-          <text x="710" y="110" fontSize="10" fontFamily="IBM Plex Mono" fill="#cbd5e1" textAnchor="middle">
-            Memory, etc.
-          </text>
-        </g>
-
-        {/* Flow Arrows */}
-        <g stroke={accentColor} strokeWidth="2" fill="none" filter="url(#glow)">
-          {/* Shell → Process */}
-          <path d="M 170 90 Q 210 90 250 90" strokeDasharray="5,5" className="animate-flow" />
-          <polygon points="250,90 240,85 240,95" fill={accentColor} />
-
-          {/* Process → Kernel */}
-          <path d="M 390 90 Q 420 90 450 90" strokeDasharray="5,5" className="animate-flow" />
-          <polygon points="450,90 440,85 440,95" fill={accentColor} />
-
-          {/* Kernel → Resources */}
-          <path d="M 590 90 Q 620 90 650 90" strokeDasharray="5,5" className="animate-flow" />
-          <polygon points="650,90 640,85 640,95" fill={accentColor} />
-        </g>
-
-        {/* LIMIT VISUALIZATION SECTION */}
-        <g>
-          {/* Soft Limit Ring */}
-          <g>
-            <text x="110" y="220" fontSize="12" fontFamily="Roboto" fontWeight="600" fill="#06b6d4" textAnchor="middle">
-              Soft Limit
-            </text>
-            <circle cx="110" cy="280" r="50" fill="none" stroke="url(#softGradient)" strokeWidth="3" opacity="0.7" />
-            <circle cx="110" cy="280" r="50" fill="none" stroke="#06b6d4" strokeWidth="1" opacity="0.3" />
-            <text x="110" y="285" fontSize="16" fontFamily="IBM Plex Mono" fontWeight="700" fill="#22d3ee" textAnchor="middle">
-              {softLimit}
-            </text>
-          </g>
-
-          {/* Hard Limit Ring */}
-          <g>
-            <text x="320" y="220" fontSize="12" fontFamily="Roboto" fontWeight="600" fill="#f59e0b" textAnchor="middle">
-              Hard Limit
-            </text>
-            <circle cx="320" cy="280" r="50" fill="none" stroke="url(#hardGradient)" strokeWidth="3" opacity="0.7" />
-            <circle cx="320" cy="280" r="50" fill="none" stroke="#f59e0b" strokeWidth="1" opacity="0.3" />
-            <text x="320" y="285" fontSize="16" fontFamily="IBM Plex Mono" fontWeight="700" fill="#fbbf24" textAnchor="middle">
-              {hardLimit}
-            </text>
-          </g>
-
-          {/* Current Usage Gauge */}
-          <g>
-            <text x="530" y="220" fontSize="12" fontFamily="Roboto" fontWeight="600" fill={accentColor} textAnchor="middle">
-              Current Usage
-            </text>
-            
-            {/* Background circle */}
-            <circle cx="530" cy="280" r="50" fill="none" stroke="#475569" strokeWidth="8" opacity="0.5" />
-            
-            {/* Usage arc */}
-            <circle
-              cx="530"
-              cy="280"
-              r="50"
-              fill="none"
-              stroke="url(#usageGradient)"
-              strokeWidth="8"
-              strokeDasharray={`${(usagePercent / 100) * 314.159} 314.159`}
-              strokeLinecap="round"
-              transform="rotate(-90 530 280)"
-              opacity="0.9"
-            />
-            
-            <text x="530" y="280" fontSize="18" fontFamily="IBM Plex Mono" fontWeight="700" fill={accentColorLight} textAnchor="middle" dominantBaseline="middle">
-              {usagePercent.toFixed(0)}%
-            </text>
-            <text x="530" y="305" fontSize="12" fontFamily="IBM Plex Mono" fill="#cbd5e1" textAnchor="middle">
-              {currentUsage}/{softLimit}
-            </text>
-          </g>
-
-          {/* Status Indicator */}
-          <g>
-            <rect x="680" y="240" width="100" height="80" rx="4" fill="#334155" stroke={accentColor} strokeWidth="1" opacity="0.5" />
-            <circle cx="730" cy="260" r="6" fill={isWarning ? '#f59e0b' : '#06b6d4'} />
-            <text x="745" y="265" fontSize="12" fontFamily="Roboto" fontWeight="600" fill={isWarning ? '#fbbf24' : '#22d3ee'}>
-              {isWarning ? 'WARNING' : 'NORMAL'}
-            </text>
-            <text x="730" y="295" fontSize="11" fontFamily="Roboto" fill="#cbd5e1" textAnchor="middle">
-              {isWarning ? 'Approaching limit' : 'Within limits'}
-            </text>
-          </g>
-        </g>
-
-        {/* Bottom Legend */}
-        <g>
-          <text x="50" y="450" fontSize="11" fontFamily="Roboto" fill="#94a3b8">
-            ▬ Soft Limit: Active enforcement boundary
-          </text>
-          <text x="350" y="450" fontSize="11" fontFamily="Roboto" fill="#94a3b8">
-            ▬ Hard Limit: Maximum ceiling (root only)
-          </text>
-          <text x="680" y="450" fontSize="11" fontFamily="Roboto" fill="#94a3b8">
-            ▬ Usage: Current resource consumption
-          </text>
-        </g>
-      </svg>
+      {/* Legend */}
+      <div className="mt-4 pt-4 border-t border-slate-700">
+        <div className="grid gap-2 text-xs text-slate-400">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-cyan-400" />
+            <span>Soft Limit: Active enforcement boundary that processes can modify</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-amber-400" />
+            <span>Hard Limit: Maximum ceiling that only root can raise</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-cyan-400" />
+            <span>Usage: Current resource consumption relative to soft limit</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
