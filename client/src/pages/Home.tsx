@@ -27,38 +27,53 @@ export default function Home() {
       description: 'Maximum number of open file descriptors',
       default: { soft: 1024, hard: 65536 },
       warning: 'Too many open files',
+      explanation:
+        'This limit controls how many files a process can open at once. When the limit is reached, new open operations fail until handles are released.',
     },
     {
       name: 'RLIMIT_CPU',
       description: 'Maximum CPU time in seconds',
       default: { soft: 'unlimited', hard: 'unlimited' },
       warning: 'CPU time limit exceeded',
+      explanation:
+        'CPU time is measured in seconds. If a process uses too much CPU, the system may terminate it when the limit is exceeded.',
     },
     {
       name: 'RLIMIT_DATA',
       description: 'Maximum size of process data segment (heap)',
       default: { soft: 'unlimited', hard: 'unlimited' },
       warning: 'Memory allocation failed',
+      explanation:
+        'The data segment sets how much heap memory a process can allocate. Exceeding this limit causes allocation failures or crashes.',
     },
     {
       name: 'RLIMIT_STACK',
       description: 'Maximum size of process stack',
-      default: { soft: '8MB', hard: 'unlimited' },
+      default: { soft: 8, hard: 'unlimited' },
       warning: 'Stack overflow (SIGSEGV)',
+      explanation:
+        'The stack limit defines how much call stack memory each process thread can use. If the stack grows too large, it can overflow and crash the process.',
     },
     {
       name: 'RLIMIT_CORE',
       description: 'Maximum size of core dump file',
       default: { soft: 0, hard: 'unlimited' },
       warning: 'Core dump truncated',
+      explanation:
+        'Core file size determines whether a crashed process can generate a dump file. A zero soft limit means no core dump is written.',
     },
     {
       name: 'RLIMIT_NPROC',
       description: 'Maximum number of processes per user',
       default: { soft: 4096, hard: 4096 },
       warning: 'Cannot fork new process',
+      explanation:
+        'This limit caps the total processes a user may create. Hitting it prevents new processes from launching until some exit.',
     },
   ];
+
+  const formatGB = (value: number | string) =>
+    typeof value === 'number' ? `${value.toLocaleString()} GB` : value;
 
   const currentResource = resources.find(r => r.name === selectedResource);
   const usagePercent = (currentUsage / softLimit) * 100;
@@ -136,7 +151,7 @@ export default function Home() {
                   <div className="flex justify-between items-center mb-2">
                     <label className="text-sm font-medium">Current Usage</label>
                     <span className={`text-sm font-mono ${isWarning ? 'text-amber-400 glow-amber' : 'text-cyan-400 glow-cyan'}`}>
-                      {currentUsage} / {softLimit}
+                      {formatGB(currentUsage)} / {formatGB(softLimit)}
                     </span>
                   </div>
                   <div className="w-full bg-slate-700 rounded-full h-2 overflow-hidden">
@@ -158,7 +173,7 @@ export default function Home() {
                 <div>
                   <div className="flex justify-between items-center mb-3">
                     <label className="text-sm font-medium">Soft Limit</label>
-                    <span className="text-sm font-mono text-cyan-400 glow-cyan">{softLimit}</span>
+                    <span className="text-sm font-mono text-cyan-400 glow-cyan">{formatGB(softLimit)}</span>
                   </div>
                   <Slider
                     value={[softLimit]}
@@ -177,7 +192,7 @@ export default function Home() {
                 <div>
                   <div className="flex justify-between items-center mb-3">
                     <label className="text-sm font-medium">Hard Limit</label>
-                    <span className="text-sm font-mono text-amber-400 glow-amber">{hardLimit}</span>
+                    <span className="text-sm font-mono text-amber-400 glow-amber">{formatGB(hardLimit)}</span>
                   </div>
                   <Slider
                     value={[hardLimit]}
@@ -225,15 +240,20 @@ export default function Home() {
                   </div>
 
                   <div>
+                    <h3 className="text-sm font-semibold text-cyan-400 mb-1">Explanation</h3>
+                    <p className="text-sm text-muted-foreground">{currentResource.explanation}</p>
+                  </div>
+
+                  <div>
                     <h3 className="text-sm font-semibold text-cyan-400 mb-1">Default Limits</h3>
                     <div className="text-sm font-mono space-y-1">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Soft:</span>
-                        <span className="text-foreground">{currentResource.default.soft}</span>
+                        <span className="text-foreground">{formatGB(currentResource.default.soft)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Hard:</span>
-                        <span className="text-foreground">{currentResource.default.hard}</span>
+                        <span className="text-foreground">{formatGB(currentResource.default.hard)}</span>
                       </div>
                     </div>
                   </div>
