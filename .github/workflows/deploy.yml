@@ -23,6 +23,8 @@ jobs:
         run: pnpm install
 
       - name: Build site
+        env:
+          VITE_BUILD_INFO: ${{ github.sha }}
         run: pnpm build
 
       - name: Deploy to gh-pages

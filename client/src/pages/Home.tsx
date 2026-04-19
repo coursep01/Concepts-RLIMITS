@@ -21,6 +21,8 @@ export default function Home() {
   const [hardLimit, setHardLimit] = useState(65536);
   const [currentUsage, setCurrentUsage] = useState(256);
 
+  const buildInfo = import.meta.env.VITE_BUILD_INFO || 'local build';
+
   const resources = [
     {
       name: 'RLIMIT_NOFILE',
@@ -267,6 +269,10 @@ export default function Home() {
                     <p className="text-xs text-muted-foreground">
                       View limits with: <code className="bg-slate-700 px-2 py-1 rounded text-cyan-300">ulimit -a</code>
                     </p>
+                  </div>
+
+                  <div className="pt-4 border-t border-border">
+                    <p className="text-xs text-muted-foreground">Build: {buildInfo}</p>
                   </div>
                 </div>
               </Card>
