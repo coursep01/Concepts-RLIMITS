@@ -1,0 +1,1409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RLIMIT Explorer — Pitch Deck</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    :root {
+      --bg: #0f172a;
+      --fg: #f8fafc;
+      --muted: #94a3b8;
+      --cyan: #06b6d4;
+      --cyan-2: #22d3ee;
+      --amber: #f59e0b;
+      --border: rgba(148, 163, 184, 0.18);
+      --panel: rgba(15, 23, 42, 0.55);
+      --panel-strong: rgba(30, 41, 59, 0.65);
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Monaco,
+        Consolas, monospace;
+      font-feature-settings: "ss02";
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+    }
+
+    a {
+      color: var(--cyan);
+    }
+
+    /* ====================================================================
+       Deck / track / slides
+       ==================================================================== */
+    .deck {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background:
+        radial-gradient(
+          ellipse at top right,
+          rgba(6, 182, 212, 0.08),
+          transparent 60%
+        ),
+        radial-gradient(
+          ellipse at bottom left,
+          rgba(245, 158, 11, 0.05),
+          transparent 60%
+        ),
+        var(--bg);
+    }
+
+    .track {
+      display: flex;
+      flex-wrap: nowrap;
+      height: 100%;
+      transition: transform 0.5s ease;
+      will-change: transform;
+    }
+
+    .slide {
+      flex: 0 0 100vw;
+      width: 100vw;
+      height: 100vh;
+      padding: clamp(1.5rem, 4vw, 4rem) clamp(1.5rem, 6vw, 6rem);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: stretch;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .slide-inner {
+      width: 100%;
+      max-width: 1180px;
+      margin: 0 auto;
+    }
+
+    .slide-eyebrow {
+      color: var(--cyan);
+      font-size: clamp(0.7rem, 0.9vw, 0.85rem);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      margin-bottom: clamp(0.75rem, 1.2vw, 1.25rem);
+      font-weight: 500;
+    }
+
+    h1.slide-title,
+    h2.slide-title {
+      font-size: clamp(1.85rem, 4.2vw, 3.4rem);
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      margin-bottom: clamp(1rem, 2.2vw, 2rem);
+      line-height: 1.1;
+    }
+
+    p.lead {
+      font-size: clamp(1rem, 1.5vw, 1.35rem);
+      color: var(--muted);
+      max-width: 60ch;
+      line-height: 1.55;
+    }
+
+    .accent-cyan {
+      color: var(--cyan);
+    }
+    .accent-amber {
+      color: var(--amber);
+    }
+    .muted {
+      color: var(--muted);
+    }
+
+    /* ====================================================================
+       Navigation chrome
+       ==================================================================== */
+    .nav-btn {
+      position: absolute;
+      bottom: clamp(1.25rem, 2.5vw, 2.5rem);
+      width: clamp(3rem, 4.5vw, 3.75rem);
+      height: clamp(3rem, 4.5vw, 3.75rem);
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.55);
+      border: 1px solid var(--border);
+      color: var(--fg);
+      font-family: inherit;
+      font-size: clamp(1rem, 1.5vw, 1.4rem);
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      transition: background 0.2s ease, border-color 0.2s ease,
+        transform 0.2s ease, color 0.2s ease;
+      z-index: 30;
+    }
+
+    .nav-btn:hover:not(:disabled) {
+      background: rgba(6, 182, 212, 0.15);
+      border-color: var(--cyan);
+      color: var(--cyan);
+      transform: translateY(-2px);
+    }
+
+    .nav-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    .nav-prev {
+      left: clamp(1.25rem, 2.5vw, 2.5rem);
+    }
+    .nav-next {
+      right: clamp(1.25rem, 2.5vw, 2.5rem);
+    }
+
+    .counter {
+      position: absolute;
+      top: clamp(1rem, 2vw, 2rem);
+      right: clamp(1rem, 2vw, 2rem);
+      font-size: clamp(0.75rem, 1vw, 0.95rem);
+      color: var(--muted);
+      letter-spacing: 0.12em;
+      padding: 0.4rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.55);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 30;
+    }
+
+    .counter strong {
+      color: var(--fg);
+      font-weight: 600;
+    }
+
+    .dots {
+      position: absolute;
+      bottom: clamp(1.5rem, 2.5vw, 2.5rem);
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: clamp(0.4rem, 0.7vw, 0.65rem);
+      z-index: 30;
+      padding: 0.55rem 0.9rem;
+      background: rgba(15, 23, 42, 0.45);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(148, 163, 184, 0.35);
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      transition: background 0.2s ease, transform 0.2s ease, width 0.2s ease;
+    }
+
+    .dot:hover {
+      background: rgba(148, 163, 184, 0.7);
+    }
+
+    .dot.active {
+      background: var(--cyan);
+      width: 22px;
+      border-radius: 999px;
+    }
+
+    /* ====================================================================
+       Slide 1 — Title
+       ==================================================================== */
+    .title-slide {
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .title-slide .slide-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: clamp(1rem, 2vw, 1.75rem);
+    }
+
+    .logo {
+      width: clamp(5rem, 9vw, 7.5rem);
+      height: clamp(5rem, 9vw, 7.5rem);
+      border-radius: clamp(1rem, 1.6vw, 1.4rem);
+      background: linear-gradient(135deg, #06b6d4 0%, #0891b2 60%, #0e7490 100%);
+      box-shadow:
+        0 20px 60px -10px rgba(6, 182, 212, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.25);
+      display: grid;
+      place-items: center;
+      color: #ffffff;
+      font-weight: 700;
+      font-size: clamp(2.5rem, 4.5vw, 4rem);
+      line-height: 1;
+      letter-spacing: -0.04em;
+      margin-bottom: clamp(0.5rem, 1.5vw, 1rem);
+    }
+
+    .title-slide h1 {
+      font-size: clamp(2.5rem, 6vw, 5rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.05;
+    }
+
+    .title-slide .subtitle {
+      font-size: clamp(1.1rem, 1.9vw, 1.6rem);
+      color: var(--cyan);
+      font-weight: 400;
+    }
+
+    .title-slide .tagline {
+      font-size: clamp(0.95rem, 1.3vw, 1.15rem);
+      color: var(--muted);
+      max-width: 56ch;
+      line-height: 1.6;
+    }
+
+    /* ====================================================================
+       Generic list cards
+       ==================================================================== */
+    .item-list {
+      display: flex;
+      flex-direction: column;
+      gap: clamp(0.75rem, 1.4vw, 1.25rem);
+      list-style: none;
+    }
+
+    .item-card {
+      display: flex;
+      align-items: flex-start;
+      gap: clamp(0.85rem, 1.4vw, 1.25rem);
+      padding: clamp(0.85rem, 1.4vw, 1.25rem) clamp(1rem, 1.6vw, 1.5rem);
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      transition: border-color 0.2s ease, background 0.2s ease;
+    }
+
+    .item-card:hover {
+      border-color: rgba(6, 182, 212, 0.45);
+      background: rgba(15, 23, 42, 0.7);
+    }
+
+    .item-icon {
+      font-size: clamp(1.2rem, 2vw, 1.7rem);
+      line-height: 1;
+      flex-shrink: 0;
+      width: clamp(1.75rem, 2.5vw, 2.25rem);
+      text-align: center;
+    }
+
+    .item-num {
+      flex-shrink: 0;
+      width: clamp(1.85rem, 2.6vw, 2.25rem);
+      height: clamp(1.85rem, 2.6vw, 2.25rem);
+      border-radius: 0.5rem;
+      background: rgba(6, 182, 212, 0.12);
+      border: 1px solid rgba(6, 182, 212, 0.4);
+      color: var(--cyan);
+      font-weight: 600;
+      font-size: clamp(0.85rem, 1.1vw, 1rem);
+      display: grid;
+      place-items: center;
+    }
+
+    .item-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .item-title {
+      font-size: clamp(0.95rem, 1.3vw, 1.15rem);
+      font-weight: 600;
+      color: var(--fg);
+      margin-bottom: 0.25rem;
+      line-height: 1.35;
+    }
+
+    .item-text {
+      font-size: clamp(0.85rem, 1.1vw, 1rem);
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    code {
+      font-family: inherit;
+      background: rgba(6, 182, 212, 0.1);
+      color: var(--cyan);
+      padding: 0.1rem 0.4rem;
+      border-radius: 0.3rem;
+      font-size: 0.92em;
+    }
+
+    /* ====================================================================
+       Slide 4 — How it works flow
+       ==================================================================== */
+    .flow-row {
+      display: flex;
+      align-items: stretch;
+      gap: clamp(0.5rem, 1vw, 1rem);
+      flex-wrap: nowrap;
+      margin-bottom: clamp(1.5rem, 3vw, 2.5rem);
+    }
+
+    .flow-box {
+      flex: 1;
+      padding: clamp(0.85rem, 1.4vw, 1.5rem) clamp(0.5rem, 1vw, 1rem);
+      background: var(--panel-strong);
+      border: 1px solid rgba(6, 182, 212, 0.4);
+      border-radius: 0.75rem;
+      text-align: center;
+      font-size: clamp(0.8rem, 1.1vw, 1rem);
+      font-weight: 500;
+      color: var(--fg);
+      display: grid;
+      place-items: center;
+      min-height: clamp(3rem, 5vw, 4.5rem);
+    }
+
+    .flow-arrow {
+      flex: 0 0 auto;
+      color: var(--cyan);
+      font-size: clamp(1rem, 1.6vw, 1.4rem);
+      display: grid;
+      place-items: center;
+      padding: 0 0.25rem;
+    }
+
+    .flow-row-secondary {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: clamp(0.5rem, 1vw, 1rem);
+    }
+
+    .flow-row-secondary .flow-box {
+      background: rgba(15, 23, 42, 0.5);
+      border-color: var(--border);
+      color: var(--muted);
+      font-weight: 400;
+      font-size: clamp(0.75rem, 1vw, 0.9rem);
+    }
+
+    /* ====================================================================
+       Slide 5 — Resource grid
+       ==================================================================== */
+    .resource-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: clamp(0.75rem, 1.2vw, 1.1rem);
+    }
+
+    .resource-card {
+      padding: clamp(0.85rem, 1.4vw, 1.2rem) clamp(1rem, 1.4vw, 1.4rem);
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--cyan);
+      border-radius: 0.5rem;
+      transition: background 0.2s ease, transform 0.2s ease;
+    }
+
+    .resource-card:hover {
+      background: rgba(15, 23, 42, 0.8);
+      transform: translateY(-2px);
+    }
+
+    .resource-name {
+      font-weight: 600;
+      color: var(--cyan);
+      font-size: clamp(0.85rem, 1.15vw, 1.05rem);
+      margin-bottom: 0.4rem;
+    }
+
+    .resource-desc {
+      font-size: clamp(0.75rem, 1vw, 0.9rem);
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    /* ====================================================================
+       Slide 6 — Design philosophy rows
+       ==================================================================== */
+    .philo-list {
+      display: flex;
+      flex-direction: column;
+      gap: clamp(0.6rem, 1.1vw, 1rem);
+    }
+
+    .philo-row {
+      display: grid;
+      grid-template-columns: minmax(180px, 0.85fr) auto 1fr;
+      align-items: center;
+      gap: clamp(0.75rem, 1.5vw, 1.5rem);
+      padding: clamp(0.85rem, 1.3vw, 1.2rem) clamp(1rem, 1.6vw, 1.5rem);
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+    }
+
+    .philo-label {
+      color: var(--cyan);
+      font-weight: 600;
+      font-size: clamp(0.85rem, 1.15vw, 1rem);
+    }
+
+    .philo-arrow {
+      color: var(--muted);
+    }
+
+    .philo-desc {
+      color: var(--muted);
+      font-size: clamp(0.8rem, 1.05vw, 0.95rem);
+      line-height: 1.5;
+    }
+
+    /* ====================================================================
+       Slide 7 — Tech stack
+       ==================================================================== */
+    .tech-table {
+      display: grid;
+      grid-template-columns: minmax(160px, 0.6fr) 1fr;
+      gap: 0;
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      overflow: hidden;
+      background: var(--panel);
+    }
+
+    .tech-row {
+      display: contents;
+    }
+
+    .tech-cell {
+      padding: clamp(0.75rem, 1.2vw, 1rem) clamp(1rem, 1.6vw, 1.4rem);
+      border-bottom: 1px solid var(--border);
+      font-size: clamp(0.85rem, 1.1vw, 1rem);
+      line-height: 1.5;
+    }
+
+    .tech-row:last-child .tech-cell {
+      border-bottom: none;
+    }
+
+    .tech-key {
+      color: var(--cyan);
+      font-weight: 600;
+      background: rgba(6, 182, 212, 0.05);
+      border-right: 1px solid var(--border);
+    }
+
+    .tech-val {
+      color: var(--fg);
+    }
+
+    .tech-val .muted {
+      color: var(--muted);
+    }
+
+    /* ====================================================================
+       Slide 8 — Architecture
+       ==================================================================== */
+    .arch-stack {
+      display: flex;
+      flex-direction: column;
+      gap: clamp(0.6rem, 1.1vw, 1rem);
+      align-items: center;
+    }
+
+    .arch-group {
+      width: 100%;
+      max-width: 760px;
+      padding: clamp(0.85rem, 1.4vw, 1.25rem) clamp(1rem, 1.6vw, 1.5rem);
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+    }
+
+    .arch-group.client {
+      border-color: rgba(6, 182, 212, 0.4);
+    }
+
+    .arch-group.server {
+      border-color: rgba(245, 158, 11, 0.35);
+    }
+
+    .arch-group-title {
+      font-size: clamp(0.75rem, 1vw, 0.9rem);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: clamp(0.5rem, 1vw, 0.85rem);
+      font-weight: 500;
+    }
+
+    .arch-group.client .arch-group-title {
+      color: var(--cyan);
+    }
+
+    .arch-group.server .arch-group-title {
+      color: var(--amber);
+    }
+
+    .arch-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: clamp(0.5rem, 1vw, 0.85rem);
+    }
+
+    .arch-row.single {
+      grid-template-columns: 1fr;
+    }
+
+    .arch-box {
+      padding: clamp(0.65rem, 1.1vw, 0.95rem) clamp(0.75rem, 1.2vw, 1rem);
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      font-size: clamp(0.75rem, 1vw, 0.9rem);
+      text-align: center;
+      color: var(--fg);
+      line-height: 1.4;
+    }
+
+    .arch-arrow {
+      font-size: clamp(1rem, 1.6vw, 1.4rem);
+      color: var(--cyan);
+      line-height: 1;
+    }
+
+    .arch-caption {
+      color: var(--muted);
+      font-size: clamp(0.8rem, 1vw, 0.9rem);
+      margin-top: clamp(0.75rem, 1.4vw, 1.25rem);
+      text-align: center;
+      letter-spacing: 0.08em;
+    }
+
+    /* ====================================================================
+       Slide 9 — Audience grid
+       ==================================================================== */
+    .audience-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: clamp(0.75rem, 1.4vw, 1.25rem);
+    }
+
+    /* ====================================================================
+       Slide 10 — Differentiators
+       ==================================================================== */
+    .bullet-list {
+      display: flex;
+      flex-direction: column;
+      gap: clamp(0.65rem, 1.1vw, 1rem);
+      list-style: none;
+    }
+
+    .bullet-row {
+      display: flex;
+      gap: clamp(0.85rem, 1.4vw, 1.25rem);
+      padding: clamp(0.7rem, 1.2vw, 1rem) clamp(1rem, 1.6vw, 1.5rem);
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 0.6rem;
+      align-items: flex-start;
+      font-size: clamp(0.9rem, 1.2vw, 1.05rem);
+      line-height: 1.5;
+      color: var(--fg);
+    }
+
+    .bullet-mark {
+      color: var(--cyan);
+      flex-shrink: 0;
+      font-weight: 700;
+    }
+
+    /* ====================================================================
+       Slide 12 — CTA
+       ==================================================================== */
+    .cta-blocks {
+      display: flex;
+      flex-direction: column;
+      gap: clamp(0.85rem, 1.4vw, 1.25rem);
+      margin-top: clamp(1rem, 2vw, 1.5rem);
+    }
+
+    .cta-block {
+      display: grid;
+      grid-template-columns: minmax(220px, 0.5fr) auto 1fr;
+      align-items: center;
+      gap: clamp(0.75rem, 1.5vw, 1.5rem);
+      padding: clamp(0.85rem, 1.3vw, 1.15rem) clamp(1rem, 1.6vw, 1.5rem);
+      background: var(--panel-strong);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+    }
+
+    .cta-code {
+      font-family: inherit;
+      font-size: clamp(0.95rem, 1.4vw, 1.2rem);
+      color: var(--cyan);
+      background: rgba(6, 182, 212, 0.1);
+      padding: 0.5rem 0.9rem;
+      border-radius: 0.5rem;
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      font-weight: 500;
+      text-align: center;
+    }
+
+    .cta-arrow {
+      color: var(--muted);
+    }
+
+    .cta-desc {
+      color: var(--fg);
+      font-size: clamp(0.9rem, 1.15vw, 1.05rem);
+    }
+
+    .cta-final {
+      margin-top: clamp(1.5rem, 3vw, 2.5rem);
+      text-align: center;
+      font-size: clamp(1rem, 1.5vw, 1.4rem);
+      color: var(--cyan);
+      font-weight: 500;
+      letter-spacing: 0.04em;
+    }
+
+    /* ====================================================================
+       Responsive
+       ==================================================================== */
+    @media (max-width: 720px) {
+      .resource-grid {
+        grid-template-columns: 1fr;
+      }
+      .audience-grid {
+        grid-template-columns: 1fr;
+      }
+      .philo-row {
+        grid-template-columns: 1fr;
+        gap: 0.4rem;
+      }
+      .philo-arrow {
+        display: none;
+      }
+      .cta-block {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+        text-align: center;
+      }
+      .cta-arrow {
+        display: none;
+      }
+      .tech-table {
+        grid-template-columns: 1fr;
+      }
+      .tech-key {
+        border-right: none;
+      }
+      .flow-row {
+        flex-wrap: wrap;
+      }
+      .flow-row .flow-box {
+        flex: 1 1 40%;
+      }
+      .flow-row-secondary {
+        grid-template-columns: 1fr;
+      }
+      .arch-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Print-ish: remove overflow hidden so all slides flow vertically */
+    @media print {
+      html,
+      body,
+      .deck {
+        overflow: visible;
+        height: auto;
+      }
+      .track {
+        flex-direction: column;
+        transform: none !important;
+      }
+      .slide {
+        flex: 0 0 auto;
+        height: auto;
+        min-height: 100vh;
+        page-break-after: always;
+      }
+      .nav-btn,
+      .dots,
+      .counter {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="deck" id="deck">
+    <div class="counter" id="counter" aria-live="polite">
+      <strong id="counter-current">1</strong> / <span id="counter-total">12</span>
+    </div>
+
+    <div class="track" id="track">
+      <!-- ============================================================
+           Slide 1 — Title
+           ============================================================ -->
+      <section class="slide title-slide" aria-label="Slide 1: Title">
+        <div class="slide-inner">
+          <div class="logo" aria-hidden="true">R</div>
+          <h1>RLIMIT Explorer</h1>
+          <div class="subtitle">Interactive Visualization of Unix Resource Limits</div>
+          <p class="tagline">
+            An educational tool that makes kernel-level concepts tangible
+            through real-time, interactive diagrams.
+          </p>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Slide 2 — The Problem
+           ============================================================ -->
+      <section class="slide" aria-label="Slide 2: The Problem">
+        <div class="slide-inner">
+          <div class="slide-eyebrow">01 — Context</div>
+          <h2 class="slide-title">The Problem</h2>
+          <ul class="item-list">
+            <li class="item-card">
+              <span class="item-icon" aria-hidden="true">⚠️</span>
+              <div class="item-body">
+                <div class="item-title">Opaque by default</div>
+                <div class="item-text">
+                  Developers only encounter rlimits when things break —
+                  <code>Too many open files</code>, <code>Stack overflow</code>,
+                  <code>Cannot fork</code>.
+                </div>
+              </div>
+            </li>
+            <li class="item-card">
+              <span class="item-icon" aria-hidden="true">📖</span>
+              <div class="item-body">
+                <div class="item-title">Hard to teach</div>
+                <div class="item-text">
+                  Soft/hard limit relationships, kernel enforcement, and
+                  per-resource behaviors are abstract concepts buried in man
+                  pages.
+                </div>
+              </div>
+            </li>
+            <li class="item-card">
+              <span class="item-icon" aria-hidden="true">💥</span>
+              <div class="item-body">
+                <div class="item-title">Costly misconfigurations</div>
+                <div class="item-text">
+                  Production outages from misconfigured
+                  <code>RLIMIT_NOFILE</code> or <code>RLIMIT_NPROC</code> are
+                  common — and preventable.
+                </div>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Slide 3 — The Solution
+           ============================================================ -->
+      <section class="slide" aria-label="Slide 3: The Solution">
+        <div class="slide-inner">
+          <div class="slide-eyebrow">02 — Approach</div>
+          <h2 class="slide-title">The Solution</h2>
+          <ul class="item-list">
+            <li class="item-card">
+              <span class="item-num">1</span>
+              <div class="item-body">
+                <div class="item-title">See the architecture</div>
+                <div class="item-text">
+                  User/Shell → Process → Kernel → Resources, rendered as a live
+                  diagram.
+                </div>
+              </div>
+            </li>
+            <li class="item-card">
+              <span class="item-num">2</span>
+              <div class="item-body">
+                <div class="item-title">Manipulate limits</div>
+                <div class="item-text">
+                  Drag soft and hard limit sliders and observe real-time visual
+                  feedback across the system.
+                </div>
+              </div>
+            </li>
+            <li class="item-card">
+              <span class="item-num">3</span>
+              <div class="item-body">
+                <div class="item-title">Simulate consumption</div>
+                <div class="item-text">
+                  Watch warning states trigger automatically once usage crosses
+                  the <span class="accent-amber">80%</span> threshold.
+                </div>
+              </div>
+            </li>
+            <li class="item-card">
+              <span class="item-num">4</span>
+              <div class="item-body">
+                <div class="item-title">Learn six core resources</div>
+                <div class="item-text">
+                  Each resource is paired with contextual explanations that
+                  connect the visual to real Unix semantics.
+                </div>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Slide 4 — How It Works
+           ============================================================ -->
+      <section class="slide" aria-label="Slide 4: How It Works">
+        <div class="slide-inner">
+          <div class="slide-eyebrow">03 — Workflow</div>
+          <h2 class="slide-title">How It Works</h2>
+
+          <div class="flow-row" role="list">
+            <div class="flow-box" role="listitem">Select Resource</div>
+            <div class="flow-arrow" aria-hidden="true">→</div>
+            <div class="flow-box" role="listitem">Adjust Limits</div>
+            <div class="flow-arrow" aria-hidden="true">→</div>
+            <div class="flow-box" role="listitem">Simulate Usage</div>
+            <div class="flow-arrow" aria-hidden="true">→</div>
+            <div class="flow-box" role="listitem">Visual Feedback</div>
+          </div>
+
+          <div class="flow-row-secondary" role="list">
+            <div class="flow-box" role="listitem">SVG Gauges Update</div>
+            <div class="flow-box" role="listitem">Architecture Animates</div>
+            <div class="flow-box" role="listitem">Warnings Trigger</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Slide 5 — Resources Covered
+           ============================================================ -->
+      <section class="slide" aria-label="Slide 5: Resources Covered">
+        <div class="slide-inner">
+          <div class="slide-eyebrow">04 — Coverage</div>
+          <h2 class="slide-title">Six Core Resources</h2>
+          <div class="resource-grid">
+            <div class="resource-card">
+              <div class="resource-name">RLIMIT_NOFILE</div>
+              <div class="resource-desc">
+                Max open file descriptors<br />
+                <span class="muted">default: 1024 / 65536</span>
+              </div>
+            </div>
+            <div class="resource-card">
+              <div class="resource-name">RLIMIT_CPU</div>
+              <div class="resource-desc">
+                Max CPU time in seconds
+              </div>
+            </div>
+            <div class="resource-card">
+              <div class="resource-name">RLIMIT_DATA</div>
+              <div class="resource-desc">
+                Max heap size
+              </div>
+            </div>
+            <div class="resource-card">
+              <div class="resource-name">RLIMIT_STACK</div>
+              <div class="resource-desc">
+                Max stack size<br />
+                <span class="muted">default: 8MB</span>
+              </div>
+            </div>
+            <div class="resource-card">
+              <div class="resource-name">RLIMIT_CORE</div>
+              <div class="resource-desc">
+                Max core dump size
+              </div>
+            </div>
+            <div class="resource-card">
+              <div class="resource-name">RLIMIT_NPROC</div>
+              <div class="resource-desc">
+                Max processes per user<br />
+                <span class="muted">default: 4096</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Slide 6 — Design Philosophy
+           ============================================================ -->
+      <section class="slide" aria-label="Slide 6: Design Philosophy">
+        <div class="slide-inner">
+          <div class="slide-eyebrow">05 — Principles</div>
+          <h2 class="slide-title">Design Philosophy</h2>
+          <div class="philo-list">
+            <div class="philo-row">
+              <div class="philo-label">Technical Minimalism</div>
+              <div class="philo-arrow" aria-hidden="true">→</div>
+              <div class="philo-desc">
+                Deep slate background, monospace typography
+              </div>
+            </div>
+            <div class="philo-row">
+              <div class="philo-label">Hierarchical Clarity</div>
+              <div class="philo-arrow" aria-hidden="true">→</div>
+              <div class="philo-desc">
+                Vertical stack mapping Unix architecture layers
+              </div>
+            </div>
+            <div class="philo-row">
+              <div class="philo-label">Interactive Learning</div>
+              <div class="philo-arrow" aria-hidden="true">→</div>
+              <div class="philo-desc">
+                Drag sliders → instant feedback → contextual explanations
+              </div>
+            </div>
+            <div class="philo-row">
+              <div class="philo-label">Visual Warning System</div>
+              <div class="philo-arrow" aria-hidden="true">→</div>
+              <div class="philo-desc">
+                Cyan → Amber → Red gradient as limits approach
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Slide 7 — Tech Stack
+           ============================================================ -->
+      <section class="slide" aria-label="Slide 7: Tech Stack">
+        <div class="slide-inner">
+          <div class="slide-eyebrow">06 — Implementation</div>
+          <h2 class="slide-title">Tech Stack</h2>
+          <div class="tech-table" role="table">
+            <div class="tech-row" role="row">
+              <div class="tech-cell tech-key" role="cell">Frontend</div>
+              <div class="tech-cell tech-val" role="cell">
+                React 19, TypeScript, Tailwind CSS 4, Framer Motion
+              </div>
+            </div>
+            <div class="tech-row" role="row">
+              <div class="tech-cell tech-key" role="cell">UI Components</div>
+              <div class="tech-cell tech-val" role="cell">
+                Radix UI <span class="muted">/</span> shadcn/ui
+              </div>
+            </div>
+            <div class="tech-row" role="row">
+              <div class="tech-cell tech-key" role="cell">Visualization</div>
+              <div class="tech-cell tech-val" role="cell">
+                Custom SVG with dynamic <code>strokeDasharray</code>
+              </div>
+            </div>
+            <div class="tech-row" role="row">
+              <div class="tech-cell tech-key" role="cell">Backend</div>
+              <div class="tech-cell tech-val" role="cell">
+                Express <span class="muted">— lightweight SPA server</span>
+              </div>
+            </div>
+            <div class="tech-row" role="row">
+              <div class="tech-cell tech-key" role="cell">Build</div>
+              <div class="tech-cell tech-val" role="cell">
+                Vite 7 + esbuild, pnpm
+              </div>
+            </div>
+            <div class="tech-row" role="row">
+              <div class="tech-cell tech-key" role="cell">Deployment</div>
+              <div class="tech-cell tech-val" role="cell">
+                GitHub Pages + offline ZIP
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Slide 8 — Architecture
+           ============================================================ -->
+      <section class="slide" aria-label="Slide 8: Architecture">
+        <div class="slide-inner">
+          <div class="slide-eyebrow">07 — System</div>
+          <h2 class="slide-title">Architecture</h2>
+          <div class="arch-stack">
+            <div class="arch-group client">
+              <div class="arch-group-title">Client (React SPA)</div>
+              <div class="arch-row">
+                <div class="arch-box">
+                  Home.tsx<br /><span class="muted">State Controller</span>
+                </div>
+                <div class="arch-box">
+                  RLimitDiagram<br /><span class="muted">SVG Renderer</span>
+                </div>
+                <div class="arch-box">
+                  Limit Sliders<br /><span class="muted">Input Layer</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="arch-arrow" aria-hidden="true">↓ ↑</div>
+
+            <div class="arch-group server">
+              <div class="arch-group-title">Server</div>
+              <div class="arch-row single">
+                <div class="arch-box">
+                  Express<br /><span class="muted">Static Serving</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="arch-caption">Unidirectional state flow</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Slide 9 — Target Audience
+           ============================================================ -->
+      <section class="slide" aria-label="Slide 9: Target Audience">
+        <div class="slide-inner">
+          <div class="slide-eyebrow">08 — Audience</div>
+          <h2 class="slide-title">Who Is This For?</h2>
+          <div class="audience-grid">
+            <div class="item-card">
+              <span class="item-icon" aria-hidden="true">🎓</span>
+              <div class="item-body">
+                <div class="item-title">CS students</div>
+                <div class="item-text">
+                  Learning OS internals and process management
+                </div>
+              </div>
+            </div>
+            <div class="item-card">
+              <span class="item-icon" aria-hidden="true">👩‍💻</span>
+              <div class="item-body">
+                <div class="item-title">Junior developers</div>
+                <div class="item-text">
+                  Encountering resource limits for the first time
+                </div>
+              </div>
+            </div>
+            <div class="item-card">
+              <span class="item-icon" aria-hidden="true">🔧</span>
+              <div class="item-body">
+                <div class="item-title">DevOps / SRE engineers</div>
+                <div class="item-text">
+                  Explaining and tuning limits across environments
+                </div>
+              </div>
+            </div>
+            <div class="item-card">
+              <span class="item-icon" aria-hidden="true">📚</span>
+              <div class="item-body">
+                <div class="item-title">Technical trainers</div>
+                <div class="item-text">Building Unix curriculum and labs</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Slide 10 — Key Differentiators
+           ============================================================ -->
+      <section class="slide" aria-label="Slide 10: Key Differentiators">
+        <div class="slide-inner">
+          <div class="slide-eyebrow">09 — Differentiators</div>
+          <h2 class="slide-title">Why RLIMIT Explorer?</h2>
+          <ul class="bullet-list">
+            <li class="bullet-row">
+              <span class="bullet-mark" aria-hidden="true">›</span>
+              <span>Not just documentation — <strong class="accent-cyan">interactive simulation</strong></span>
+            </li>
+            <li class="bullet-row">
+              <span class="bullet-mark" aria-hidden="true">›</span>
+              <span>System-level visual metaphor mapping real Unix architecture</span>
+            </li>
+            <li class="bullet-row">
+              <span class="bullet-mark" aria-hidden="true">›</span>
+              <span>Offline-capable — ships as ZIP for air-gapped environments</span>
+            </li>
+            <li class="bullet-row">
+              <span class="bullet-mark" aria-hidden="true">›</span>
+              <span>Zero runtime dependencies — no database, no auth, pure client-side</span>
+            </li>
+            <li class="bullet-row">
+              <span class="bullet-mark" aria-hidden="true">›</span>
+              <span>Open source <span class="muted">(MIT license)</span></span>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Slide 11 — Roadmap
+           ============================================================ -->
+      <section class="slide" aria-label="Slide 11: Roadmap">
+        <div class="slide-inner">
+          <div class="slide-eyebrow">10 — Roadmap</div>
+          <h2 class="slide-title">What's Next</h2>
+          <ul class="bullet-list">
+            <li class="bullet-row">
+              <span class="bullet-mark" aria-hidden="true">+</span>
+              <span>Additional resources: <code>RLIMIT_AS</code>, <code>RLIMIT_MEMLOCK</code>, <code>RLIMIT_FSIZE</code></span>
+            </li>
+            <li class="bullet-row">
+              <span class="bullet-mark" aria-hidden="true">+</span>
+              <span>Terminal-inspired CRT/neon aesthetic mode</span>
+            </li>
+            <li class="bullet-row">
+              <span class="bullet-mark" aria-hidden="true">+</span>
+              <span>Gamified learning with milestones</span>
+            </li>
+            <li class="bullet-row">
+              <span class="bullet-mark" aria-hidden="true">+</span>
+              <span>Live system integration — read actual <code>ulimit</code> values</span>
+            </li>
+            <li class="bullet-row">
+              <span class="bullet-mark" aria-hidden="true">+</span>
+              <span>Embeddable widget for documentation sites</span>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Slide 12 — Call to Action
+           ============================================================ -->
+      <section class="slide" aria-label="Slide 12: Get Started">
+        <div class="slide-inner">
+          <div class="slide-eyebrow">11 — Get Started</div>
+          <h2 class="slide-title">Get Started</h2>
+
+          <div class="cta-blocks">
+            <div class="cta-block">
+              <div class="cta-code">pnpm dev</div>
+              <div class="cta-arrow" aria-hidden="true">→</div>
+              <div class="cta-desc">Try it locally</div>
+            </div>
+            <div class="cta-block">
+              <div class="cta-code">pnpm deploy</div>
+              <div class="cta-arrow" aria-hidden="true">→</div>
+              <div class="cta-desc">Ship to GitHub Pages</div>
+            </div>
+            <div class="cta-block">
+              <div class="cta-code">MIT Licensed</div>
+              <div class="cta-arrow" aria-hidden="true">→</div>
+              <div class="cta-desc">Open to contributions</div>
+            </div>
+          </div>
+
+          <div class="cta-final">Make kernel concepts visible.</div>
+        </div>
+      </section>
+    </div>
+
+    <button
+      class="nav-btn nav-prev"
+      id="prev"
+      aria-label="Previous slide"
+      type="button"
+    >
+      ‹
+    </button>
+    <button
+      class="nav-btn nav-next"
+      id="next"
+      aria-label="Next slide"
+      type="button"
+    >
+      ›
+    </button>
+
+    <div class="dots" id="dots" role="tablist" aria-label="Slide navigation"></div>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      var track = document.getElementById("track");
+      var slides = track ? track.querySelectorAll(".slide") : [];
+      var total = slides.length;
+      var current = 0;
+
+      var prevBtn = document.getElementById("prev");
+      var nextBtn = document.getElementById("next");
+      var dotsContainer = document.getElementById("dots");
+      var counterCurrent = document.getElementById("counter-current");
+      var counterTotal = document.getElementById("counter-total");
+
+      if (counterTotal) counterTotal.textContent = String(total);
+
+      // Build dot indicators
+      var dots = [];
+      if (dotsContainer) {
+        for (var i = 0; i < total; i++) {
+          var dot = document.createElement("button");
+          dot.type = "button";
+          dot.className = "dot";
+          dot.setAttribute("role", "tab");
+          dot.setAttribute("aria-label", "Go to slide " + (i + 1));
+          dot.dataset.index = String(i);
+          dot.addEventListener("click", (function (idx) {
+            return function () {
+              go(idx);
+            };
+          })(i));
+          dotsContainer.appendChild(dot);
+          dots.push(dot);
+        }
+      }
+
+      function update() {
+        if (track) {
+          track.style.transform = "translateX(" + -current * 100 + "vw)";
+        }
+        if (counterCurrent) counterCurrent.textContent = String(current + 1);
+        if (prevBtn) prevBtn.disabled = current === 0;
+        if (nextBtn) nextBtn.disabled = current === total - 1;
+        for (var i = 0; i < dots.length; i++) {
+          if (i === current) {
+            dots[i].classList.add("active");
+            dots[i].setAttribute("aria-selected", "true");
+          } else {
+            dots[i].classList.remove("active");
+            dots[i].setAttribute("aria-selected", "false");
+          }
+        }
+      }
+
+      function go(idx) {
+        if (idx < 0) idx = 0;
+        if (idx > total - 1) idx = total - 1;
+        current = idx;
+        update();
+      }
+
+      function next() {
+        go(current + 1);
+      }
+
+      function prev() {
+        go(current - 1);
+      }
+
+      if (prevBtn) prevBtn.addEventListener("click", prev);
+      if (nextBtn) nextBtn.addEventListener("click", next);
+
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "ArrowRight" || e.key === " " || e.key === "PageDown") {
+          e.preventDefault();
+          next();
+        } else if (
+          e.key === "ArrowLeft" ||
+          e.key === "PageUp" ||
+          e.key === "Backspace"
+        ) {
+          e.preventDefault();
+          prev();
+        } else if (e.key === "Home") {
+          e.preventDefault();
+          go(0);
+        } else if (e.key === "End") {
+          e.preventDefault();
+          go(total - 1);
+        }
+      });
+
+      // Touch / swipe support
+      var touchStartX = null;
+      var touchStartY = null;
+      var SWIPE_THRESHOLD = 50;
+      document.addEventListener(
+        "touchstart",
+        function (e) {
+          if (e.touches && e.touches.length === 1) {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+          }
+        },
+        { passive: true }
+      );
+      document.addEventListener(
+        "touchend",
+        function (e) {
+          if (touchStartX === null) return;
+          var endTouch =
+            e.changedTouches && e.changedTouches[0]
+              ? e.changedTouches[0]
+              : null;
+          if (!endTouch) {
+            touchStartX = null;
+            touchStartY = null;
+            return;
+          }
+          var dx = endTouch.clientX - touchStartX;
+          var dy = endTouch.clientY - touchStartY;
+          if (
+            Math.abs(dx) > SWIPE_THRESHOLD &&
+            Math.abs(dx) > Math.abs(dy)
+          ) {
+            if (dx < 0) next();
+            else prev();
+          }
+          touchStartX = null;
+          touchStartY = null;
+        },
+        { passive: true }
+      );
+
+      // Support deep linking via #N (1-indexed)
+      function readHash() {
+        var m = (window.location.hash || "").match(/^#(\d+)$/);
+        if (m) {
+          var idx = parseInt(m[1], 10) - 1;
+          if (!isNaN(idx)) go(idx);
+        }
+      }
+      window.addEventListener("hashchange", readHash);
+      readHash();
+
+      update();
+    })();
+  </script>
+</body>
+</html>
