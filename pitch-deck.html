@@ -1,0 +1,1439 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>RLIMIT Explorer — Pitch Deck</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* ----- Design tokens (mirror client/src/index.css) ----- */
+      :root {
+        --bg: #1e293b;
+        --bg-deep: #0f172a;
+        --panel: #334155;
+        --panel-2: #475569;
+        --muted: #64748b;
+        --fg: #e2e8f0;
+        --fg-soft: #cbd5e1;
+        --fg-dim: #94a3b8;
+        --cyan: #06b6d4;
+        --cyan-2: #0891b2;
+        --cyan-glow: rgba(6, 182, 212, 0.18);
+        --amber: #f59e0b;
+        --amber-glow: rgba(245, 158, 11, 0.18);
+        --red: #ef4444;
+        --border: #475569;
+        --grid-line: rgba(148, 163, 184, 0.08);
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--fg);
+        font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo,
+          Consolas, "Liberation Mono", monospace;
+        font-weight: 400;
+        font-size: 16px;
+        line-height: 1.5;
+        overflow: hidden;
+        background-image: linear-gradient(
+            var(--grid-line) 1px,
+            transparent 1px
+          ),
+          linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+        background-size: 48px 48px;
+      }
+
+      /* ----- Deck shell ----- */
+      .deck {
+        position: fixed;
+        inset: 0;
+        overflow: hidden;
+      }
+
+      .track {
+        display: flex;
+        height: 100%;
+        width: 100%;
+        transform: translateX(0);
+        transition: transform 600ms cubic-bezier(0.65, 0, 0.35, 1);
+        will-change: transform;
+      }
+
+      .slide {
+        flex: 0 0 100vw;
+        height: 100vh;
+        padding: 6vh 7vw 12vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 1.5rem;
+        position: relative;
+        overflow: hidden;
+      }
+
+      /* Slide entrance accent */
+      .slide::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 3px;
+        width: 100%;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          var(--cyan),
+          transparent
+        );
+        opacity: 0.7;
+      }
+
+      /* ----- Typography ----- */
+      h1,
+      h2,
+      h3,
+      p,
+      ul,
+      ol,
+      table {
+        margin: 0;
+      }
+
+      .eyebrow {
+        font-size: 0.85rem;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--cyan);
+        font-weight: 500;
+      }
+
+      h1 {
+        font-size: clamp(2.5rem, 5.5vw, 5rem);
+        font-weight: 700;
+        line-height: 1.05;
+        letter-spacing: -0.02em;
+      }
+
+      h2 {
+        font-size: clamp(1.75rem, 3.6vw, 3rem);
+        font-weight: 600;
+        line-height: 1.1;
+        letter-spacing: -0.01em;
+      }
+
+      .subtitle {
+        font-size: clamp(1.1rem, 1.8vw, 1.5rem);
+        color: var(--fg-soft);
+        font-weight: 400;
+      }
+
+      .tagline {
+        font-size: clamp(0.95rem, 1.3vw, 1.15rem);
+        color: var(--fg-dim);
+        max-width: 60ch;
+      }
+
+      .accent {
+        color: var(--cyan);
+      }
+
+      .warn {
+        color: var(--amber);
+      }
+
+      code,
+      .mono {
+        font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo,
+          Consolas, monospace;
+      }
+
+      /* ----- Slide 1: Title ----- */
+      .title-slide {
+        align-items: flex-start;
+      }
+
+      .title-slide .logo {
+        width: clamp(80px, 8vw, 128px);
+        height: clamp(80px, 8vw, 128px);
+        border-radius: 16px;
+        background: linear-gradient(135deg, var(--cyan) 0%, var(--cyan-2) 100%);
+        display: grid;
+        place-items: center;
+        font-size: clamp(3rem, 5vw, 4.5rem);
+        font-weight: 700;
+        color: var(--bg-deep);
+        box-shadow:
+          0 0 0 1px rgba(6, 182, 212, 0.4),
+          0 20px 60px -10px var(--cyan-glow),
+          inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        margin-bottom: 0.5rem;
+      }
+
+      .title-slide h1 {
+        background: linear-gradient(180deg, #f1f5f9 0%, #94a3b8 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      /* ----- Generic content blocks ----- */
+      .stack {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+      }
+
+      .lede {
+        font-size: clamp(1rem, 1.4vw, 1.2rem);
+        color: var(--fg-soft);
+        max-width: 70ch;
+      }
+
+      ul.bullets,
+      ol.numbered {
+        list-style: none;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 1.1rem;
+        max-width: 90ch;
+      }
+
+      ul.bullets li,
+      ol.numbered li {
+        display: grid;
+        grid-template-columns: 2.4rem 1fr;
+        align-items: start;
+        gap: 1rem;
+        padding: 1rem 1.2rem;
+        background: rgba(51, 65, 85, 0.55);
+        border: 1px solid var(--border);
+        border-left: 3px solid var(--cyan);
+        border-radius: 8px;
+        backdrop-filter: blur(2px);
+      }
+
+      ul.bullets .icon,
+      ol.numbered .num {
+        font-size: 1.5rem;
+        line-height: 1;
+        color: var(--cyan);
+        font-weight: 600;
+      }
+
+      ol.numbered .num {
+        font-feature-settings: "tnum" 1;
+      }
+
+      .item-title {
+        font-weight: 600;
+        color: var(--fg);
+      }
+
+      .item-body {
+        color: var(--fg-soft);
+        font-size: 0.95rem;
+        margin-top: 0.25rem;
+      }
+
+      /* ----- Slide 4: Flow diagram ----- */
+      .flow {
+        display: flex;
+        align-items: stretch;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+      }
+
+      .flow-step {
+        flex: 1 1 180px;
+        min-width: 160px;
+        padding: 1.1rem 1rem;
+        background: rgba(51, 65, 85, 0.6);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        text-align: center;
+        position: relative;
+      }
+
+      .flow-step .step-num {
+        font-size: 0.75rem;
+        letter-spacing: 0.2em;
+        color: var(--cyan);
+        text-transform: uppercase;
+      }
+
+      .flow-step .step-title {
+        font-weight: 600;
+        margin-top: 0.4rem;
+      }
+
+      .flow-step .step-body {
+        font-size: 0.85rem;
+        color: var(--fg-dim);
+        margin-top: 0.4rem;
+      }
+
+      .flow-arrow {
+        align-self: center;
+        color: var(--cyan);
+        font-size: 1.5rem;
+        font-weight: 700;
+        padding: 0 0.25rem;
+        flex: 0 0 auto;
+      }
+
+      .flow-step.feedback {
+        border-color: var(--amber);
+        box-shadow: 0 0 0 1px var(--amber-glow);
+      }
+
+      .flow-step.feedback .step-num {
+        color: var(--amber);
+      }
+
+      /* ----- Slide 5: Resources grid ----- */
+      .grid-3x2 {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-rows: repeat(2, 1fr);
+        gap: 1rem;
+        max-width: 1200px;
+      }
+
+      .res-card {
+        padding: 1.25rem 1.25rem;
+        border: 1px solid var(--cyan);
+        border-radius: 8px;
+        background:
+          linear-gradient(
+            180deg,
+            rgba(6, 182, 212, 0.06) 0%,
+            rgba(15, 23, 42, 0.55) 100%
+          );
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .res-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 24px;
+        height: 24px;
+        background: var(--cyan);
+        clip-path: polygon(100% 0, 0 0, 100% 100%);
+        opacity: 0.6;
+      }
+
+      .res-card .res-name {
+        color: var(--cyan);
+        font-weight: 600;
+        font-size: 1.05rem;
+        letter-spacing: 0.02em;
+      }
+
+      .res-card .res-desc {
+        color: var(--fg-soft);
+        font-size: 0.9rem;
+      }
+
+      /* ----- Slide 6 & 7: Tables ----- */
+      .data-table {
+        width: 100%;
+        max-width: 1100px;
+        border-collapse: collapse;
+        font-size: 0.95rem;
+      }
+
+      .data-table th,
+      .data-table td {
+        text-align: left;
+        padding: 0.9rem 1.1rem;
+        border-bottom: 1px solid var(--border);
+        vertical-align: top;
+      }
+
+      .data-table th {
+        color: var(--cyan);
+        font-weight: 500;
+        font-size: 0.78rem;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+
+      .data-table tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .data-table .key {
+        color: var(--cyan);
+        white-space: nowrap;
+        font-weight: 600;
+      }
+
+      .data-table .arrow-cell {
+        color: var(--muted);
+      }
+
+      /* ----- Slide 8: Architecture diagram ----- */
+      .arch {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        gap: 1rem;
+        align-items: stretch;
+        max-width: 1100px;
+      }
+
+      .arch-box {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 1.25rem;
+        background: rgba(51, 65, 85, 0.55);
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      .arch-box.client {
+        border-color: var(--cyan);
+        box-shadow: 0 0 0 1px var(--cyan-glow);
+      }
+
+      .arch-label {
+        font-size: 0.78rem;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--cyan);
+      }
+
+      .arch-title {
+        font-size: 1.05rem;
+        font-weight: 600;
+      }
+
+      .arch-piece {
+        padding: 0.6rem 0.8rem;
+        background: var(--bg-deep);
+        border: 1px dashed var(--border);
+        border-radius: 6px;
+        font-size: 0.9rem;
+        color: var(--fg-soft);
+      }
+
+      .arch-piece .piece-title {
+        color: var(--cyan);
+        font-weight: 600;
+        font-size: 0.95rem;
+      }
+
+      .arch-piece .piece-sub {
+        color: var(--fg-dim);
+        font-size: 0.8rem;
+      }
+
+      .arch-bridge {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        color: var(--cyan);
+        font-size: 0.8rem;
+      }
+
+      .arch-bridge .arrow {
+        font-size: 1.5rem;
+      }
+
+      .arch-caption {
+        color: var(--fg-dim);
+        font-size: 0.95rem;
+        max-width: 70ch;
+      }
+
+      /* ----- Slide 12: CTA ----- */
+      .cta-blocks {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1rem;
+        max-width: 1100px;
+      }
+
+      .cta-block {
+        padding: 1.25rem;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--bg-deep);
+      }
+
+      .cta-block.warn {
+        border-color: var(--amber);
+        color: var(--fg);
+      }
+
+      .cta-block code {
+        display: block;
+        font-size: 1.15rem;
+        color: var(--cyan);
+        font-weight: 600;
+        margin-bottom: 0.4rem;
+      }
+
+      .cta-block.warn code {
+        color: var(--amber);
+      }
+
+      .cta-block .cta-desc {
+        color: var(--fg-dim);
+        font-size: 0.9rem;
+      }
+
+      .final-tagline {
+        margin-top: 1.5rem;
+        font-size: clamp(1.1rem, 1.6vw, 1.4rem);
+        color: var(--fg-soft);
+        text-align: center;
+      }
+
+      .final-tagline .accent {
+        color: var(--cyan);
+        font-weight: 600;
+      }
+
+      /* ----- Chrome: counter, controls, dots ----- */
+      .deck-chrome {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 10;
+      }
+
+      .deck-chrome > * {
+        pointer-events: auto;
+      }
+
+      .counter {
+        position: absolute;
+        top: 1.25rem;
+        right: 1.5rem;
+        font-size: 0.85rem;
+        color: var(--fg-dim);
+        letter-spacing: 0.1em;
+      }
+
+      .counter .current {
+        color: var(--cyan);
+        font-weight: 600;
+      }
+
+      .brand {
+        position: absolute;
+        top: 1.25rem;
+        left: 1.5rem;
+        font-size: 0.78rem;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: var(--fg-dim);
+      }
+
+      .brand .accent {
+        color: var(--cyan);
+      }
+
+      .nav-btn {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        border: 1px solid var(--border);
+        background: rgba(15, 23, 42, 0.6);
+        color: var(--fg-soft);
+        font-family: inherit;
+        font-size: 1.2rem;
+        cursor: pointer;
+        display: grid;
+        place-items: center;
+        transition: all 200ms ease;
+        backdrop-filter: blur(6px);
+      }
+
+      .nav-btn:hover:not(:disabled) {
+        border-color: var(--cyan);
+        color: var(--cyan);
+        box-shadow: 0 0 0 1px var(--cyan-glow);
+      }
+
+      .nav-btn:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+      }
+
+      .nav-btn.prev {
+        left: 1.5rem;
+      }
+
+      .nav-btn.next {
+        right: 1.5rem;
+      }
+
+      .dots {
+        position: absolute;
+        bottom: 1.5rem;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 0.5rem;
+        padding: 0.5rem 0.9rem;
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        backdrop-filter: blur(6px);
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--muted);
+        border: 0;
+        padding: 0;
+        cursor: pointer;
+        transition: all 200ms ease;
+      }
+
+      .dot:hover {
+        background: var(--fg-dim);
+      }
+
+      .dot.active {
+        background: var(--cyan);
+        width: 24px;
+        border-radius: 999px;
+        box-shadow: 0 0 8px var(--cyan-glow);
+      }
+
+      .hint {
+        position: absolute;
+        bottom: 1.5rem;
+        right: 1.5rem;
+        font-size: 0.75rem;
+        color: var(--fg-dim);
+        letter-spacing: 0.1em;
+      }
+
+      .hint kbd {
+        display: inline-block;
+        padding: 0.1rem 0.4rem;
+        border: 1px solid var(--border);
+        border-bottom-width: 2px;
+        border-radius: 4px;
+        background: var(--bg-deep);
+        color: var(--fg-soft);
+        font-family: inherit;
+        font-size: 0.7rem;
+        margin: 0 0.15rem;
+      }
+
+      /* ----- Responsive ----- */
+      @media (max-width: 900px) {
+        .slide {
+          padding: 5vh 5vw 14vh;
+          gap: 1rem;
+        }
+        .grid-3x2 {
+          grid-template-columns: repeat(2, 1fr);
+          grid-template-rows: auto;
+        }
+        .cta-blocks {
+          grid-template-columns: 1fr;
+        }
+        .arch {
+          grid-template-columns: 1fr;
+        }
+        .arch-bridge {
+          flex-direction: row;
+        }
+        .arch-bridge .arrow {
+          transform: rotate(90deg);
+        }
+        .nav-btn.prev {
+          left: 0.5rem;
+        }
+        .nav-btn.next {
+          right: 0.5rem;
+        }
+        .hint {
+          display: none;
+        }
+      }
+
+      @media (max-width: 600px) {
+        .grid-3x2 {
+          grid-template-columns: 1fr;
+        }
+        .flow {
+          flex-direction: column;
+        }
+        .flow-arrow {
+          transform: rotate(90deg);
+          align-self: center;
+        }
+        h1 {
+          font-size: 2.25rem;
+        }
+        h2 {
+          font-size: 1.6rem;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .track {
+          transition: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="deck" aria-label="RLIMIT Explorer pitch deck">
+      <div class="track" id="track">
+        <!-- Slide 1: Title -->
+        <section
+          class="slide title-slide"
+          aria-roledescription="slide"
+          aria-label="Slide 1 of 12: Title"
+        >
+          <div class="logo" aria-hidden="true">R</div>
+          <p class="eyebrow">Pitch Deck · 2025</p>
+          <h1>RLIMIT Explorer</h1>
+          <p class="subtitle">
+            Interactive Visualization of Unix Resource Limits
+          </p>
+          <p class="tagline">
+            An educational tool that makes kernel-level concepts tangible
+            through real-time, interactive diagrams.
+          </p>
+        </section>
+
+        <!-- Slide 2: The Problem -->
+        <section
+          class="slide"
+          aria-roledescription="slide"
+          aria-label="Slide 2 of 12: The Problem"
+        >
+          <p class="eyebrow">01 · Context</p>
+          <h2>The Problem</h2>
+          <p class="lede">
+            Resource limits silently shape every Linux process — yet they
+            remain misunderstood until production breaks.
+          </p>
+          <ul class="bullets">
+            <li>
+              <span class="icon" aria-hidden="true">⚠️</span>
+              <div>
+                <div class="item-title">Opaque by default</div>
+                <div class="item-body">
+                  Developers only encounter rlimits when things break:
+                  <code>Too many open files</code>,
+                  <code>Stack overflow</code>, <code>Cannot fork</code>.
+                </div>
+              </div>
+            </li>
+            <li>
+              <span class="icon" aria-hidden="true">📖</span>
+              <div>
+                <div class="item-title">Hard to teach</div>
+                <div class="item-body">
+                  Soft/hard limit relationships, kernel enforcement, and
+                  per-resource behaviors are abstract concepts buried in
+                  man pages.
+                </div>
+              </div>
+            </li>
+            <li>
+              <span class="icon" aria-hidden="true">💥</span>
+              <div>
+                <div class="item-title">Costly misconfigurations</div>
+                <div class="item-body">
+                  Production outages from misconfigured
+                  <code>RLIMIT_NOFILE</code> or
+                  <code>RLIMIT_NPROC</code> are common — and entirely
+                  preventable.
+                </div>
+              </div>
+            </li>
+          </ul>
+        </section>
+
+        <!-- Slide 3: The Solution -->
+        <section
+          class="slide"
+          aria-roledescription="slide"
+          aria-label="Slide 3 of 12: The Solution"
+        >
+          <p class="eyebrow">02 · Approach</p>
+          <h2>The Solution</h2>
+          <p class="lede">
+            A live, interactive diagram that maps Unix architecture and
+            lets you drive it.
+          </p>
+          <ol class="numbered">
+            <li>
+              <span class="num">01</span>
+              <div>
+                <div class="item-title">See the system architecture</div>
+                <div class="item-body">
+                  User/Shell → Process → Kernel → Resources rendered as a
+                  live, animated diagram.
+                </div>
+              </div>
+            </li>
+            <li>
+              <span class="num">02</span>
+              <div>
+                <div class="item-title">Manipulate soft and hard limits</div>
+                <div class="item-body">
+                  Drag sliders and observe real-time visual feedback as
+                  values propagate through the kernel layer.
+                </div>
+              </div>
+            </li>
+            <li>
+              <span class="num">03</span>
+              <div>
+                <div class="item-title">Simulate resource consumption</div>
+                <div class="item-body">
+                  Watch warning states trigger as usage crosses the
+                  <span class="warn">80% threshold</span>.
+                </div>
+              </div>
+            </li>
+            <li>
+              <span class="num">04</span>
+              <div>
+                <div class="item-title">Learn six core resources</div>
+                <div class="item-body">
+                  Each comes with contextual explanations, defaults, and
+                  failure modes drawn from real-world systems.
+                </div>
+              </div>
+            </li>
+          </ol>
+        </section>
+
+        <!-- Slide 4: How It Works -->
+        <section
+          class="slide"
+          aria-roledescription="slide"
+          aria-label="Slide 4 of 12: How It Works"
+        >
+          <p class="eyebrow">03 · Mechanics</p>
+          <h2>How It Works</h2>
+          <p class="lede">
+            A four-step loop turns abstract limits into observable state.
+          </p>
+          <div class="flow">
+            <div class="flow-step">
+              <div class="step-num">Step 01</div>
+              <div class="step-title">Select Resource</div>
+              <div class="step-body">
+                Pick from six rlimits — NOFILE, CPU, DATA, STACK, CORE,
+                NPROC.
+              </div>
+            </div>
+            <div class="flow-arrow" aria-hidden="true">→</div>
+            <div class="flow-step">
+              <div class="step-num">Step 02</div>
+              <div class="step-title">Adjust Limits</div>
+              <div class="step-body">
+                Drag soft and hard limit sliders within kernel-valid
+                bounds.
+              </div>
+            </div>
+            <div class="flow-arrow" aria-hidden="true">→</div>
+            <div class="flow-step">
+              <div class="step-num">Step 03</div>
+              <div class="step-title">Simulate Usage</div>
+              <div class="step-body">
+                Increase current consumption to probe the boundary.
+              </div>
+            </div>
+            <div class="flow-arrow" aria-hidden="true">→</div>
+            <div class="flow-step feedback">
+              <div class="step-num">Step 04</div>
+              <div class="step-title">Visual Feedback</div>
+              <div class="step-body">
+                SVG gauges update, architecture animates, warnings
+                trigger.
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Slide 5: Resources Covered -->
+        <section
+          class="slide"
+          aria-roledescription="slide"
+          aria-label="Slide 5 of 12: Resources Covered"
+        >
+          <p class="eyebrow">04 · Coverage</p>
+          <h2>Six Core Resources</h2>
+          <p class="lede">
+            The most consequential rlimits, each with a tangible failure
+            mode.
+          </p>
+          <div class="grid-3x2">
+            <div class="res-card">
+              <div class="res-name">RLIMIT_NOFILE</div>
+              <div class="res-desc">Max open file descriptors</div>
+            </div>
+            <div class="res-card">
+              <div class="res-name">RLIMIT_CPU</div>
+              <div class="res-desc">Max CPU time</div>
+            </div>
+            <div class="res-card">
+              <div class="res-name">RLIMIT_DATA</div>
+              <div class="res-desc">Max heap size</div>
+            </div>
+            <div class="res-card">
+              <div class="res-name">RLIMIT_STACK</div>
+              <div class="res-desc">Max stack size</div>
+            </div>
+            <div class="res-card">
+              <div class="res-name">RLIMIT_CORE</div>
+              <div class="res-desc">Max core dump size</div>
+            </div>
+            <div class="res-card">
+              <div class="res-name">RLIMIT_NPROC</div>
+              <div class="res-desc">Max processes per user</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Slide 6: Design Philosophy -->
+        <section
+          class="slide"
+          aria-roledescription="slide"
+          aria-label="Slide 6 of 12: Design Philosophy"
+        >
+          <p class="eyebrow">05 · Principles</p>
+          <h2>Design Philosophy</h2>
+          <p class="lede">
+            Every visual choice maps to a teaching goal.
+          </p>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Principle</th>
+                <th></th>
+                <th>Manifestation</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="key">Technical Minimalism</td>
+                <td class="arrow-cell">→</td>
+                <td>Deep slate background, monospace typography</td>
+              </tr>
+              <tr>
+                <td class="key">Hierarchical Clarity</td>
+                <td class="arrow-cell">→</td>
+                <td>Vertical stack mapping Unix architecture layers</td>
+              </tr>
+              <tr>
+                <td class="key">Interactive Learning</td>
+                <td class="arrow-cell">→</td>
+                <td>
+                  Drag sliders → instant feedback → contextual
+                  explanations
+                </td>
+              </tr>
+              <tr>
+                <td class="key">Visual Warning System</td>
+                <td class="arrow-cell">→</td>
+                <td>
+                  <span class="accent">Cyan</span> →
+                  <span class="warn">Amber</span> →
+                  <span style="color: var(--red)">Red</span> gradient as
+                  limits approach
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <!-- Slide 7: Tech Stack -->
+        <section
+          class="slide"
+          aria-roledescription="slide"
+          aria-label="Slide 7 of 12: Tech Stack"
+        >
+          <p class="eyebrow">06 · Implementation</p>
+          <h2>Tech Stack</h2>
+          <p class="lede">
+            Modern, dependency-light, and built to ship as a static
+            bundle.
+          </p>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Layer</th>
+                <th>Tools</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="key">Frontend</td>
+                <td>React 19, TypeScript, Tailwind CSS 4, Framer Motion</td>
+              </tr>
+              <tr>
+                <td class="key">UI Components</td>
+                <td>Radix UI / shadcn/ui</td>
+              </tr>
+              <tr>
+                <td class="key">Visualization</td>
+                <td>Custom SVG with dynamic <code>strokeDasharray</code></td>
+              </tr>
+              <tr>
+                <td class="key">Backend</td>
+                <td>Express (lightweight SPA server)</td>
+              </tr>
+              <tr>
+                <td class="key">Build</td>
+                <td>Vite 7 + esbuild, pnpm</td>
+              </tr>
+              <tr>
+                <td class="key">Deployment</td>
+                <td>GitHub Pages + offline ZIP</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <!-- Slide 8: Architecture -->
+        <section
+          class="slide"
+          aria-roledescription="slide"
+          aria-label="Slide 8 of 12: Architecture"
+        >
+          <p class="eyebrow">07 · System</p>
+          <h2>Architecture</h2>
+          <p class="lede">
+            Unidirectional state flow — Home.tsx manages all state, passes
+            props to RLimitDiagram.
+          </p>
+          <div class="arch">
+            <div class="arch-box client">
+              <div class="arch-label">Client</div>
+              <div class="arch-title">Browser SPA</div>
+              <div class="arch-piece">
+                <div class="piece-title">Home.tsx</div>
+                <div class="piece-sub">State Controller</div>
+              </div>
+              <div class="arch-piece">
+                <div class="piece-title">RLimitDiagram</div>
+                <div class="piece-sub">SVG Renderer</div>
+              </div>
+              <div class="arch-piece">
+                <div class="piece-title">Limit Sliders</div>
+                <div class="piece-sub">Soft / Hard / Usage</div>
+              </div>
+            </div>
+
+            <div class="arch-bridge" aria-hidden="true">
+              <span>HTTP</span>
+              <span class="arrow">↔</span>
+              <span>static</span>
+            </div>
+
+            <div class="arch-box">
+              <div class="arch-label">Server</div>
+              <div class="arch-title">Static Host</div>
+              <div class="arch-piece">
+                <div class="piece-title">Express</div>
+                <div class="piece-sub">Static Serving</div>
+              </div>
+              <div class="arch-piece">
+                <div class="piece-title">GitHub Pages</div>
+                <div class="piece-sub">CDN distribution</div>
+              </div>
+            </div>
+          </div>
+          <p class="arch-caption">
+            Unidirectional state flow — <code>Home.tsx</code> manages all
+            state, passes props to <code>RLimitDiagram</code>.
+          </p>
+        </section>
+
+        <!-- Slide 9: Target Audience -->
+        <section
+          class="slide"
+          aria-roledescription="slide"
+          aria-label="Slide 9 of 12: Target Audience"
+        >
+          <p class="eyebrow">08 · Audience</p>
+          <h2>Who Is This For?</h2>
+          <ul class="bullets">
+            <li>
+              <span class="icon" aria-hidden="true">🎓</span>
+              <div>
+                <div class="item-title">CS students</div>
+                <div class="item-body">
+                  Learning OS internals and process management.
+                </div>
+              </div>
+            </li>
+            <li>
+              <span class="icon" aria-hidden="true">👩‍💻</span>
+              <div>
+                <div class="item-title">Junior developers</div>
+                <div class="item-body">
+                  Encountering resource limits for the first time.
+                </div>
+              </div>
+            </li>
+            <li>
+              <span class="icon" aria-hidden="true">🔧</span>
+              <div>
+                <div class="item-title">DevOps / SRE engineers</div>
+                <div class="item-body">
+                  Explaining limit tuning to teams during incident reviews.
+                </div>
+              </div>
+            </li>
+            <li>
+              <span class="icon" aria-hidden="true">📚</span>
+              <div>
+                <div class="item-title">Technical trainers</div>
+                <div class="item-body">
+                  Building Unix curriculum with visual, hands-on aids.
+                </div>
+              </div>
+            </li>
+          </ul>
+        </section>
+
+        <!-- Slide 10: Differentiators -->
+        <section
+          class="slide"
+          aria-roledescription="slide"
+          aria-label="Slide 10 of 12: Why RLIMIT Explorer"
+        >
+          <p class="eyebrow">09 · Differentiators</p>
+          <h2>Why RLIMIT Explorer?</h2>
+          <ul class="bullets">
+            <li>
+              <span class="icon" aria-hidden="true">▸</span>
+              <div>
+                <div class="item-title">
+                  Not just documentation — interactive simulation
+                </div>
+              </div>
+            </li>
+            <li>
+              <span class="icon" aria-hidden="true">▸</span>
+              <div>
+                <div class="item-title">
+                  System-level visual metaphor mapping real Unix
+                  architecture
+                </div>
+              </div>
+            </li>
+            <li>
+              <span class="icon" aria-hidden="true">▸</span>
+              <div>
+                <div class="item-title">
+                  Offline-capable — ships as ZIP for air-gapped
+                  environments
+                </div>
+              </div>
+            </li>
+            <li>
+              <span class="icon" aria-hidden="true">▸</span>
+              <div>
+                <div class="item-title">
+                  Zero runtime dependencies — no database, no auth, pure
+                  client-side
+                </div>
+              </div>
+            </li>
+            <li>
+              <span class="icon" aria-hidden="true">▸</span>
+              <div>
+                <div class="item-title">
+                  Open source <span class="accent">(MIT license)</span>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </section>
+
+        <!-- Slide 11: Roadmap -->
+        <section
+          class="slide"
+          aria-roledescription="slide"
+          aria-label="Slide 11 of 12: Roadmap"
+        >
+          <p class="eyebrow">10 · Roadmap</p>
+          <h2>What's Next</h2>
+          <ul class="bullets">
+            <li>
+              <span class="icon" aria-hidden="true">+</span>
+              <div>
+                <div class="item-title">Additional resources</div>
+                <div class="item-body">
+                  <code>RLIMIT_AS</code>, <code>RLIMIT_MEMLOCK</code>,
+                  <code>RLIMIT_FSIZE</code>.
+                </div>
+              </div>
+            </li>
+            <li>
+              <span class="icon" aria-hidden="true">+</span>
+              <div>
+                <div class="item-title">
+                  Terminal-inspired CRT/neon aesthetic mode
+                </div>
+              </div>
+            </li>
+            <li>
+              <span class="icon" aria-hidden="true">+</span>
+              <div>
+                <div class="item-title">
+                  Gamified learning with milestones
+                </div>
+              </div>
+            </li>
+            <li>
+              <span class="icon" aria-hidden="true">+</span>
+              <div>
+                <div class="item-title">Live system integration</div>
+                <div class="item-body">
+                  Read actual <code>ulimit</code> values from the host.
+                </div>
+              </div>
+            </li>
+            <li>
+              <span class="icon" aria-hidden="true">+</span>
+              <div>
+                <div class="item-title">
+                  Embeddable widget for documentation sites
+                </div>
+              </div>
+            </li>
+          </ul>
+        </section>
+
+        <!-- Slide 12: Call to Action -->
+        <section
+          class="slide"
+          aria-roledescription="slide"
+          aria-label="Slide 12 of 12: Get Started"
+        >
+          <p class="eyebrow">11 · Get Started</p>
+          <h2>Get Started</h2>
+          <p class="lede">
+            Three commands to run, ship, or contribute.
+          </p>
+          <div class="cta-blocks">
+            <div class="cta-block">
+              <code>pnpm dev</code>
+              <div class="cta-desc">Try it locally</div>
+            </div>
+            <div class="cta-block">
+              <code>pnpm deploy</code>
+              <div class="cta-desc">Ship to GitHub Pages</div>
+            </div>
+            <div class="cta-block warn">
+              <code>MIT</code>
+              <div class="cta-desc">Licensed — open to contributions</div>
+            </div>
+          </div>
+          <p class="final-tagline">
+            <span class="accent">Make kernel concepts visible.</span>
+          </p>
+        </section>
+      </div>
+
+      <!-- Chrome -->
+      <div class="deck-chrome" aria-hidden="false">
+        <div class="brand">
+          <span class="accent">R</span> · RLIMIT Explorer
+        </div>
+        <div class="counter" aria-live="polite">
+          <span class="current" id="counter-current">1</span>
+          <span> / </span>
+          <span id="counter-total">12</span>
+        </div>
+        <button
+          class="nav-btn prev"
+          id="prev-btn"
+          aria-label="Previous slide"
+          type="button"
+        >
+          ‹
+        </button>
+        <button
+          class="nav-btn next"
+          id="next-btn"
+          aria-label="Next slide"
+          type="button"
+        >
+          ›
+        </button>
+        <div class="dots" id="dots" role="tablist" aria-label="Slide navigation"></div>
+        <div class="hint">
+          <kbd>←</kbd><kbd>→</kbd> to navigate
+        </div>
+      </div>
+    </main>
+
+    <script>
+      (function () {
+        "use strict";
+
+        var track = document.getElementById("track");
+        var slides = track.querySelectorAll(".slide");
+        var total = slides.length;
+        var counterCurrent = document.getElementById("counter-current");
+        var counterTotal = document.getElementById("counter-total");
+        var prevBtn = document.getElementById("prev-btn");
+        var nextBtn = document.getElementById("next-btn");
+        var dotsContainer = document.getElementById("dots");
+
+        var index = 0;
+
+        counterTotal.textContent = String(total);
+
+        // Build dot indicators
+        var dots = [];
+        for (var i = 0; i < total; i++) {
+          var dot = document.createElement("button");
+          dot.className = "dot";
+          dot.type = "button";
+          dot.setAttribute("role", "tab");
+          dot.setAttribute("aria-label", "Go to slide " + (i + 1));
+          dot.dataset.index = String(i);
+          dot.addEventListener("click", function (ev) {
+            var target = ev.currentTarget;
+            goTo(parseInt(target.dataset.index, 10));
+          });
+          dotsContainer.appendChild(dot);
+          dots.push(dot);
+        }
+
+        function update() {
+          track.style.transform = "translateX(" + -index * 100 + "vw)";
+          counterCurrent.textContent = String(index + 1);
+          for (var i = 0; i < dots.length; i++) {
+            if (i === index) {
+              dots[i].classList.add("active");
+              dots[i].setAttribute("aria-selected", "true");
+            } else {
+              dots[i].classList.remove("active");
+              dots[i].setAttribute("aria-selected", "false");
+            }
+          }
+          prevBtn.disabled = index === 0;
+          nextBtn.disabled = index === total - 1;
+        }
+
+        function goTo(i) {
+          if (i < 0) i = 0;
+          if (i > total - 1) i = total - 1;
+          if (i === index) return;
+          index = i;
+          update();
+        }
+
+        function next() {
+          goTo(index + 1);
+        }
+
+        function prev() {
+          goTo(index - 1);
+        }
+
+        prevBtn.addEventListener("click", prev);
+        nextBtn.addEventListener("click", next);
+
+        document.addEventListener("keydown", function (ev) {
+          if (ev.key === "ArrowRight" || ev.key === "PageDown" || ev.key === " ") {
+            ev.preventDefault();
+            next();
+          } else if (ev.key === "ArrowLeft" || ev.key === "PageUp") {
+            ev.preventDefault();
+            prev();
+          } else if (ev.key === "Home") {
+            ev.preventDefault();
+            goTo(0);
+          } else if (ev.key === "End") {
+            ev.preventDefault();
+            goTo(total - 1);
+          }
+        });
+
+        // Touch swipe support (lightweight)
+        var touchStartX = null;
+        document.addEventListener(
+          "touchstart",
+          function (ev) {
+            if (ev.touches.length === 1) {
+              touchStartX = ev.touches[0].clientX;
+            }
+          },
+          { passive: true }
+        );
+        document.addEventListener(
+          "touchend",
+          function (ev) {
+            if (touchStartX === null) return;
+            var dx = ev.changedTouches[0].clientX - touchStartX;
+            if (Math.abs(dx) > 50) {
+              if (dx < 0) next();
+              else prev();
+            }
+            touchStartX = null;
+          },
+          { passive: true }
+        );
+
+        // Hash-based deep links (e.g., #5 → slide 5)
+        function syncFromHash() {
+          var raw = window.location.hash.replace("#", "");
+          var n = parseInt(raw, 10);
+          if (!isNaN(n) && n >= 1 && n <= total) {
+            goTo(n - 1);
+          }
+        }
+        window.addEventListener("hashchange", syncFromHash);
+
+        update();
+        syncFromHash();
+      })();
+    </script>
+  </body>
+</html>
