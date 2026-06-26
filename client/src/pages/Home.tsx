@@ -1,304 +1,337 @@
-import { useState } from 'react';
-import { Card } from '@/components/ui/card';
-import { Slider } from '@/components/ui/slider';
-import { Info } from 'lucide-react';
-import RLimitDiagram from '@/components/RLimitDiagram';
+import { useEffect, useMemo, useState } from "react";
+import { AlertCircle, Clock3, MapPin, RefreshCw, Search, TrainFront } from "lucide-react";
 
-/**
- * Home Page - Interactive RLIMIT Diagram
- * 
- * Design Philosophy: System Architecture Visualization
- * - Hierarchical layout: User/Shell → Process → Kernel → Resources
- * - Cyan accents (#06b6d4) for active flows
- * - Amber (#f59e0b) for warnings/exceeded limits
- * - Deep slate background (#1e293b) for technical authority
- * - Interactive cards and animated flow visualization
- */
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+import { getArrivals, searchStations, type TflArrival, type TflStation } from "@/lib/tfl";
 
-export default function Home() {
-  const [selectedResource, setSelectedResource] = useState('RLIMIT_NOFILE');
-  const [softLimit, setSoftLimit] = useState(1024);
-  const [hardLimit, setHardLimit] = useState(65536);
-  const [currentUsage, setCurrentUsage] = useState(256);
+const SELECTED_STATION_KEY = "tfl-selected-station";
 
-  const buildInfo = import.meta.env.VITE_BUILD_INFO || 'local build';
+function getArrivalMinutes(arrival: TflArrival) {
+  return Math.max(0, Math.ceil(arrival.timeToStation / 60));
+}
 
-  const resources = [
-    {
-      name: 'RLIMIT_NOFILE',
-      description: 'Maximum number of open file descriptors',
-      default: { soft: 1024, hard: 65536 },
-      warning: 'Too many open files',
-      explanation:
-        'This limit controls how many files a process can open at once. When the limit is reached, new open operations fail until handles are released.',
-    },
-    {
-      name: 'RLIMIT_CPU',
-      description: 'Maximum CPU time in seconds',
-      default: { soft: 'unlimited', hard: 'unlimited' },
-      warning: 'CPU time limit exceeded',
-      explanation:
-        'CPU time is measured in seconds. If a process uses too much CPU, the system may terminate it when the limit is exceeded.',
-    },
-    {
-      name: 'RLIMIT_DATA',
-      description: 'Maximum size of process data segment (heap)',
-      default: { soft: 'unlimited', hard: 'unlimited' },
-      warning: 'Memory allocation failed',
-      explanation:
-        'The data segment sets how much heap memory a process can allocate. Exceeding this limit causes allocation failures or crashes.',
-    },
-    {
-      name: 'RLIMIT_STACK',
-      description: 'Maximum size of process stack',
-      default: { soft: 8, hard: 'unlimited' },
-      warning: 'Stack overflow (SIGSEGV)',
-      explanation:
-        'The stack limit defines how much call stack memory each process thread can use. If the stack grows too large, it can overflow and crash the process.',
-    },
-    {
-      name: 'RLIMIT_CORE',
-      description: 'Maximum size of core dump file',
-      default: { soft: 0, hard: 'unlimited' },
-      warning: 'Core dump truncated',
-      explanation:
-        'Core file size determines whether a crashed process can generate a dump file. A zero soft limit means no core dump is written.',
-    },
-    {
-      name: 'RLIMIT_NPROC',
-      description: 'Maximum number of processes per user',
-      default: { soft: 4096, hard: 4096 },
-      warning: 'Cannot fork new process',
-      explanation:
-        'This limit caps the total processes a user may create. Hitting it prevents new processes from launching until some exit.',
-    },
-  ];
+function formatArrivalTime(arrival: TflArrival) {
+  return new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(arrival.expectedArrival));
+}
 
-  const formatGB = (value: number | string) =>
-    typeof value === 'number' ? `${value.toLocaleString()} GB` : value;
+function readSavedStation(): TflStation | null {
+  try {
+    const saved = localStorage.getItem(SELECTED_STATION_KEY);
+    return saved ? (JSON.parse(saved) as TflStation) : null;
+  } catch {
+    return null;
+  }
+}
 
-  const currentResource = resources.find(r => r.name === selectedResource);
-  const usagePercent = (currentUsage / softLimit) * 100;
-  const isWarning = usagePercent > 80;
-
+function StationResult({ station, onSelect }: { station: TflStation; onSelect: (station: TflStation) => void }) {
   return (
-    <div className="min-h-screen bg-background text-foreground grid-bg">
-      {/* Header */}
-      <header className="border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container py-6">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center">
-              <span className="text-slate-900 font-bold text-lg">R</span>
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">RLIMIT Explorer</h1>
-              <p className="text-sm text-muted-foreground">Interactive visualization of Unix resource limits</p>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="container py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Sidebar - Resource Selection */}
-          <div className="lg:col-span-1">
-            <Card className="bg-card border-border p-4">
-              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Info className="w-5 h-5 text-cyan-400" />
-                Resources
-              </h2>
-              <div className="space-y-2">
-                {resources.map((resource) => (
-                  <button
-                    key={resource.name}
-                    onClick={() => setSelectedResource(resource.name)}
-                    className={`w-full text-left px-3 py-2 rounded transition-colors ${
-                      selectedResource === resource.name
-                        ? 'bg-cyan-500/20 border border-cyan-400 text-cyan-300'
-                        : 'hover:bg-slate-700/50 text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    <div className="font-mono text-xs font-semibold">{resource.name}</div>
-                    <div className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                      {resource.description}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </Card>
-          </div>
-
-          {/* Main Content Area */}
-          <div className="lg:col-span-3 space-y-6">
-            {/* Diagram Section */}
-            <Card className="bg-card border-border p-6">
-              <h2 className="text-xl font-semibold mb-4">System Architecture</h2>
-              <RLimitDiagram
-                resource={selectedResource}
-                softLimit={softLimit}
-                hardLimit={hardLimit}
-                currentUsage={currentUsage}
-                isWarning={isWarning}
-              />
-            </Card>
-
-            {/* Interactive Controls */}
-            <Card className="bg-card border-border p-6">
-              <h2 className="text-xl font-semibold mb-6">Limit Configuration</h2>
-              
-              <div className="space-y-6">
-                {/* Current Usage */}
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <label className="text-sm font-medium">Current Usage</label>
-                    <span className={`text-sm font-mono ${isWarning ? 'text-amber-400 glow-amber' : 'text-cyan-400 glow-cyan'}`}>
-                      {formatGB(currentUsage)} / {formatGB(softLimit)}
-                    </span>
-                  </div>
-                  <div className="w-full bg-slate-700 rounded-full h-2 overflow-hidden">
-                    <div
-                      className={`h-full transition-all duration-300 ${
-                        isWarning
-                          ? 'bg-gradient-to-r from-amber-500 to-red-500'
-                          : 'bg-gradient-to-r from-cyan-400 to-cyan-600'
-                      }`}
-                      style={{ width: `${Math.min(usagePercent, 100)}%` }}
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {usagePercent.toFixed(1)}% of soft limit
-                  </p>
-                </div>
-
-                {/* Soft Limit Slider */}
-                <div>
-                  <div className="flex justify-between items-center mb-3">
-                    <label className="text-sm font-medium">Soft Limit</label>
-                    <span className="text-sm font-mono text-cyan-400 glow-cyan">{formatGB(softLimit)}</span>
-                  </div>
-                  <Slider
-                    value={[softLimit]}
-                    onValueChange={(value) => setSoftLimit(value[0])}
-                    min={100}
-                    max={hardLimit}
-                    step={100}
-                    className="w-full"
-                  />
-                  <p className="text-xs text-muted-foreground mt-2">
-                    The value currently enforced by the kernel. Can be changed by the process up to the hard limit.
-                  </p>
-                </div>
-
-                {/* Hard Limit Slider */}
-                <div>
-                  <div className="flex justify-between items-center mb-3">
-                    <label className="text-sm font-medium">Hard Limit</label>
-                    <span className="text-sm font-mono text-amber-400 glow-amber">{formatGB(hardLimit)}</span>
-                  </div>
-                  <Slider
-                    value={[hardLimit]}
-                    onValueChange={(value) => setHardLimit(Math.max(value[0], softLimit))}
-                    min={softLimit}
-                    max={100000}
-                    step={100}
-                    className="w-full"
-                  />
-                  <p className="text-xs text-muted-foreground mt-2">
-                    The ceiling for the soft limit. Only root can raise this value.
-                  </p>
-                </div>
-
-                {/* Usage Slider */}
-                <div>
-                  <div className="flex justify-between items-center mb-3">
-                    <label className="text-sm font-medium">Simulate Usage</label>
-                    <span className="text-sm font-mono text-slate-400">{currentUsage}</span>
-                  </div>
-                  <Slider
-                    value={[currentUsage]}
-                    onValueChange={(value) => setCurrentUsage(value[0])}
-                    min={0}
-                    max={softLimit * 1.2}
-                    step={10}
-                    className="w-full"
-                  />
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Adjust to see how the system responds as limits are approached.
-                  </p>
-                </div>
-              </div>
-            </Card>
-
-            {/* Resource Details */}
-            {currentResource && (
-              <Card className="bg-card border-border p-6">
-                <h2 className="text-xl font-semibold mb-4">{currentResource.name}</h2>
-                
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-sm font-semibold text-cyan-400 mb-1">Description</h3>
-                    <p className="text-sm text-muted-foreground">{currentResource.description}</p>
-                  </div>
-
-                  <div>
-                    <h3 className="text-sm font-semibold text-cyan-400 mb-1">Explanation</h3>
-                    <p className="text-sm text-muted-foreground">{currentResource.explanation}</p>
-                  </div>
-
-                  <div>
-                    <h3 className="text-sm font-semibold text-cyan-400 mb-1">Default Limits</h3>
-                    <div className="text-sm font-mono space-y-1">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Soft:</span>
-                        <span className="text-foreground">{formatGB(currentResource.default.soft)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Hard:</span>
-                        <span className="text-foreground">{formatGB(currentResource.default.hard)}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-sm font-semibold text-amber-400 mb-1">When Exceeded</h3>
-                    <p className="text-sm text-muted-foreground">{currentResource.warning}</p>
-                  </div>
-
-                  <div className="pt-2 border-t border-border">
-                    <p className="text-xs text-muted-foreground">
-                      View limits with: <code className="bg-slate-700 px-2 py-1 rounded text-cyan-300">ulimit -a</code>
-                    </p>
-                  </div>
-
-                  <div className="pt-4 border-t border-border">
-                    <p className="text-xs text-muted-foreground">Build: {buildInfo}</p>
-                  </div>
-                </div>
-              </Card>
-            )}
-          </div>
-        </div>
-
-        {/* Footer Info Section */}
-        <Card className="bg-card border-border p-6 mt-8">
-          <h2 className="text-lg font-semibold mb-4">Understanding Soft vs Hard Limits</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h3 className="text-sm font-semibold text-cyan-400 mb-2">Soft Limit</h3>
-              <p className="text-sm text-muted-foreground">
-                The value currently enforced by the kernel for the process. A process can change its soft limit to any value up to the hard limit. This is the active limit that matters for day-to-day operation.
-              </p>
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-amber-400 mb-2">Hard Limit</h3>
-              <p className="text-sm text-muted-foreground">
-                Acts as a ceiling for the soft limit. An unprivileged process can lower the hard limit but cannot raise it. Only the root user can raise hard limits. This provides a safety boundary.
-              </p>
-            </div>
-          </div>
-        </Card>
-      </main>
-    </div>
+    <button
+      type="button"
+      onClick={() => onSelect(station)}
+      className="glass-button w-full rounded-3xl px-4 py-3 text-left transition hover:-translate-y-0.5 hover:bg-white/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+    >
+      <span className="flex items-center gap-3">
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-black/80 text-white shadow-lg">
+          <MapPin className="size-5" />
+        </span>
+        <span className="min-w-0">
+          <span className="block truncate text-sm font-semibold text-slate-950">{station.name}</span>
+          <span className="mt-1 block truncate text-xs capitalize text-slate-600">
+            {station.modes.length > 0 ? station.modes.join(" · ").replace(/-/g, " ") : "TfL stop"}
+            {station.zone ? ` · Zone ${station.zone}` : ""}
+          </span>
+        </span>
+      </span>
+    </button>
   );
 }
+
+function ArrivalCard({ arrival }: { arrival: TflArrival }) {
+  const minutes = getArrivalMinutes(arrival);
+  const isDue = minutes === 0;
+
+  return (
+    <Card className="glass-card gap-4 rounded-[2rem] border-white/35 p-4 shadow-xl">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="size-2.5 rounded-full bg-emerald-400 shadow-[0_0_18px_rgba(52,211,153,0.8)]" />
+            <p className="truncate text-sm font-semibold text-slate-950">{arrival.lineName}</p>
+          </div>
+          <h3 className="mt-2 text-lg font-bold leading-tight text-slate-950">{arrival.destinationName}</h3>
+          {arrival.platformName && <p className="mt-1 text-sm text-slate-600">{arrival.platformName}</p>}
+        </div>
+        <div className="rounded-3xl bg-slate-950 px-4 py-3 text-center text-white shadow-lg">
+          <p className="text-2xl font-black leading-none">{isDue ? "Due" : minutes}</p>
+          {!isDue && <p className="mt-1 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-white/70">min</p>}
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-white/40 pt-3 text-xs text-slate-600">
+        <span className="inline-flex items-center gap-1.5">
+          <Clock3 className="size-3.5" />
+          {formatArrivalTime(arrival)}
+        </span>
+        {arrival.currentLocation && <span className="truncate">{arrival.currentLocation}</span>}
+      </div>
+    </Card>
+  );
+}
+
+export default function Home() {
+  const [query, setQuery] = useState("");
+  const [stations, setStations] = useState<TflStation[]>([]);
+  const [selectedStation, setSelectedStation] = useState<TflStation | null>(() => readSavedStation());
+  const [arrivals, setArrivals] = useState<TflArrival[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isLoadingArrivals, setIsLoadingArrivals] = useState(false);
+  const [searchError, setSearchError] = useState("");
+  const [arrivalsError, setArrivalsError] = useState("");
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  const nextArrival = arrivals[0];
+  const stationHeading = selectedStation?.name ?? "Choose your station";
+  const lastUpdatedLabel = useMemo(() => {
+    if (!lastUpdated) {
+      return "Not refreshed yet";
+    }
+
+    return `Updated ${new Intl.DateTimeFormat("en-GB", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    }).format(lastUpdated)}`;
+  }, [lastUpdated]);
+
+  useEffect(() => {
+    const searchTerm = query.trim();
+
+    if (searchTerm.length < 2) {
+      setStations([]);
+      setSearchError("");
+      setIsSearching(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    setIsSearching(true);
+    setSearchError("");
+
+    const timeoutId = window.setTimeout(() => {
+      searchStations(searchTerm, controller.signal)
+        .then(setStations)
+        .catch((error) => {
+          if (error instanceof DOMException && error.name === "AbortError") {
+            return;
+          }
+
+          setStations([]);
+          setSearchError("Could not search TfL stations. Please try again.");
+        })
+        .finally(() => setIsSearching(false));
+    }, 300);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      controller.abort();
+    };
+  }, [query]);
+
+  useEffect(() => {
+    if (!selectedStation) {
+      return;
+    }
+
+    localStorage.setItem(SELECTED_STATION_KEY, JSON.stringify(selectedStation));
+  }, [selectedStation]);
+
+  useEffect(() => {
+    if (!selectedStation) {
+      return;
+    }
+
+    const controller = new AbortController();
+
+    setIsLoadingArrivals(true);
+    setArrivalsError("");
+
+    getArrivals(selectedStation.id, controller.signal)
+      .then((nextArrivals) => {
+        setArrivals(nextArrivals);
+        setLastUpdated(new Date());
+      })
+      .catch((error) => {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+
+        setArrivals([]);
+        setArrivalsError("Could not load live arrivals from TfL. Pull a refresh in a moment.");
+      })
+      .finally(() => setIsLoadingArrivals(false));
+
+    return () => controller.abort();
+  }, [selectedStation]);
+
+  const selectStation = (station: TflStation) => {
+    setSelectedStation(station);
+    setQuery("");
+    setStations([]);
+  };
+
+  const refreshArrivals = async () => {
+    if (!selectedStation) {
+      return;
+    }
+
+    setIsLoadingArrivals(true);
+    setArrivalsError("");
+
+    try {
+      const nextArrivals = await getArrivals(selectedStation.id);
+      setArrivals(nextArrivals);
+      setLastUpdated(new Date());
+    } catch {
+      setArrivalsError("Could not refresh arrivals from TfL. Please try again.");
+    } finally {
+      setIsLoadingArrivals(false);
+    }
+  };
+
+  return (
+    <main className="min-h-screen overflow-hidden bg-background text-foreground">
+      <div className="ios-orb ios-orb-one" />
+      <div className="ios-orb ios-orb-two" />
+      <div className="ios-orb ios-orb-three" />
+
+      <section className="relative z-10 mx-auto flex min-h-screen w-full max-w-xl flex-col px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-[calc(1.25rem+env(safe-area-inset-top))]">
+        <header className="mb-5 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-600">TfL live trains</p>
+            <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950">Next train</h1>
+          </div>
+          <div className="glass-card flex size-14 items-center justify-center rounded-[1.35rem] border-white/40 p-0 shadow-xl">
+            <TrainFront className="size-7 text-slate-950" />
+          </div>
+        </header>
+
+        <Card className="glass-card rounded-[2.25rem] border-white/40 p-5 shadow-2xl">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">Station</p>
+              <h2 className="mt-2 truncate text-2xl font-black text-slate-950">{stationHeading}</h2>
+              <p className="mt-1 text-sm text-slate-600">{lastUpdatedLabel}</p>
+            </div>
+            <Button
+              type="button"
+              size="icon"
+              onClick={refreshArrivals}
+              disabled={!selectedStation || isLoadingArrivals}
+              aria-label="Refresh arrivals"
+              className="size-12 rounded-2xl bg-slate-950 text-white shadow-lg hover:bg-slate-800"
+            >
+              <RefreshCw className={cn("size-5", isLoadingArrivals && "animate-spin")} />
+            </Button>
+          </div>
+
+          <div className="mt-5 rounded-[1.75rem] border border-white/35 bg-white/35 p-2 shadow-inner">
+            <label htmlFor="station-search" className="sr-only">
+              Search for a TfL station
+            </label>
+            <div className="flex items-center gap-2 rounded-[1.35rem] bg-white/55 px-4 py-2">
+              <Search className="size-5 shrink-0 text-slate-500" />
+              <Input
+                id="station-search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search station, e.g. King's Cross"
+                className="h-11 border-0 bg-transparent px-0 text-base font-medium text-slate-950 shadow-none placeholder:text-slate-500 focus-visible:ring-0"
+                autoComplete="off"
+              />
+            </div>
+          </div>
+
+          {(isSearching || stations.length > 0 || searchError) && (
+            <div className="mt-4 space-y-3">
+              {isSearching && <p className="px-1 text-sm text-slate-600">Searching TfL stations...</p>}
+              {searchError && (
+                <p className="flex items-center gap-2 rounded-2xl bg-red-500/10 px-4 py-3 text-sm font-medium text-red-700">
+                  <AlertCircle className="size-4" />
+                  {searchError}
+                </p>
+              )}
+              {stations.map((station) => (
+                <StationResult key={station.id} station={station} onSelect={selectStation} />
+              ))}
+            </div>
+          )}
+        </Card>
+
+        <section className="mt-5 flex-1 space-y-4">
+          {nextArrival && (
+            <Card className="glass-card rounded-[2.25rem] border-white/40 bg-slate-950/90 p-5 text-white shadow-2xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/55">Next due</p>
+              <div className="mt-4 flex items-end justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="truncate text-base font-semibold text-white/80">{nextArrival.lineName}</p>
+                  <h2 className="mt-1 text-2xl font-black leading-tight">{nextArrival.destinationName}</h2>
+                </div>
+                <div className="text-right">
+                  <p className="text-5xl font-black leading-none">
+                    {getArrivalMinutes(nextArrival) === 0 ? "Due" : getArrivalMinutes(nextArrival)}
+                  </p>
+                  {getArrivalMinutes(nextArrival) > 0 && (
+                    <p className="mt-1 text-xs font-bold uppercase tracking-[0.2em] text-white/55">min</p>
+                  )}
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {arrivalsError && (
+            <Card className="glass-card rounded-[2rem] border-red-200/70 bg-red-100/70 p-4 text-red-800">
+              <div className="flex gap-3">
+                <AlertCircle className="mt-0.5 size-5 shrink-0" />
+                <p className="text-sm font-medium">{arrivalsError}</p>
+              </div>
+            </Card>
+          )}
+
+          {!selectedStation && (
+            <Card className="glass-card rounded-[2rem] border-white/40 p-6 text-center shadow-xl">
+              <p className="text-lg font-bold text-slate-950">Start with a station</p>
+              <p className="mt-2 text-sm text-slate-600">
+                Search for a tube, rail, Overground, DLR, or Elizabeth line station to see live TfL arrivals.
+              </p>
+            </Card>
+          )}
+
+          {selectedStation && isLoadingArrivals && arrivals.length === 0 && (
+            <Card className="glass-card rounded-[2rem] border-white/40 p-6 text-center shadow-xl">
+              <RefreshCw className="mx-auto size-6 animate-spin text-slate-600" />
+              <p className="mt-3 text-sm font-medium text-slate-600">Loading live arrivals...</p>
+            </Card>
+          )}
+
+          {selectedStation && !isLoadingArrivals && arrivals.length === 0 && !arrivalsError && (
+            <Card className="glass-card rounded-[2rem] border-white/40 p-6 text-center shadow-xl">
+              <p className="text-lg font-bold text-slate-950">No arrivals listed</p>
+              <p className="mt-2 text-sm text-slate-600">TfL is not reporting upcoming trains for this station right now.</p>
+            </Card>
+          )}
+
+          {arrivals.slice(nextArrival ? 1 : 0, 7).map((arrival) => (
+            <ArrivalCard key={arrival.id} arrival={arrival} />
+          ))}
+        </section>
+      </section>
+    </main>
+  );
+}
+
