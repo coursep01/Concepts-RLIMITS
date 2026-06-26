@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { defineConfig, type Plugin, type ViteDevServer } from "vite";
 import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
+import { VitePWA } from "vite-plugin-pwa";
 
 // =============================================================================
 // Manus Debug Collector - Vite Plugin
@@ -203,7 +204,67 @@ function vitePluginStorageProxy(): Plugin {
   };
 }
 
-const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector(), vitePluginStorageProxy()];
+const plugins = [
+  react(),
+  tailwindcss(),
+  jsxLocPlugin(),
+  vitePluginManusRuntime(),
+  vitePluginManusDebugCollector(),
+  vitePluginStorageProxy(),
+  VitePWA({
+    registerType: "autoUpdate",
+    includeAssets: ["pwa-icon.svg", "apple-touch-icon.svg"],
+    manifest: {
+      name: "TfL Next Train",
+      short_name: "Next Train",
+      description: "Live TfL train arrivals in a mobile-friendly PWA.",
+      theme_color: "#eaf4ff",
+      background_color: "#eaf4ff",
+      display: "standalone",
+      orientation: "portrait",
+      scope: "./",
+      start_url: "./",
+      icons: [
+        {
+          src: "pwa-icon.svg",
+          sizes: "any",
+          type: "image/svg+xml",
+          purpose: "any maskable",
+        },
+        {
+          src: "apple-touch-icon.svg",
+          sizes: "180x180",
+          type: "image/svg+xml",
+        },
+      ],
+    },
+    workbox: {
+      globPatterns: ["**/*.{js,css,html,svg,ico,png,webmanifest}"],
+      runtimeCaching: [
+        {
+          urlPattern: ({ request, sameOrigin }) =>
+            sameOrigin && ["document", "script", "style", "image", "font"].includes(request.destination),
+          handler: "StaleWhileRevalidate",
+          options: {
+            cacheName: "app-shell-assets",
+          },
+        },
+        {
+          urlPattern: /^https:\/\/api\.tfl\.gov\.uk\/.*/i,
+          handler: "NetworkFirst",
+          options: {
+            cacheName: "tfl-api",
+            networkTimeoutSeconds: 8,
+            expiration: {
+              maxEntries: 40,
+              maxAgeSeconds: 60,
+            },
+          },
+        },
+      ],
+    },
+  }),
+];
 
 export default defineConfig({
   base: process.env.NODE_ENV === 'production' ? '/Concepts-RLIMITS/' : '/',

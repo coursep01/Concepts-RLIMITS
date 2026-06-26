@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="TfL Next Train app icon">
+  <defs>
+    <linearGradient id="bg" x1="96" y1="48" x2="416" y2="464" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F8FBFF"/>
+      <stop offset="0.48" stop-color="#DFF1FF"/>
+      <stop offset="1" stop-color="#F6E7FF"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="128" y1="118" x2="384" y2="394" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity="0.92"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.48"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="390" cy="118" r="98" fill="#A78BFA" opacity="0.52"/>
+  <circle cx="126" cy="382" r="112" fill="#38BDF8" opacity="0.45"/>
+  <rect x="104" y="96" width="304" height="320" rx="80" fill="url(#glass)" stroke="#FFFFFF" stroke-width="10"/>
+  <path d="M166 214c0-42 34-76 76-76h28c42 0 76 34 76 76v92c0 22-18 40-40 40H206c-22 0-40-18-40-40v-92Z" fill="#0F172A"/>
+  <path d="M202 212c0-22 18-40 40-40h28c22 0 40 18 40 40v34H202v-34Z" fill="#FFFFFF"/>
+  <circle cx="218" cy="302" r="18" fill="#EAF4FF"/>
+  <circle cx="294" cy="302" r="18" fill="#EAF4FF"/>
+  <path d="M218 372h76" stroke="#0F172A" stroke-width="24" stroke-linecap="round"/>
+</svg>
